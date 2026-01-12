@@ -2,42 +2,46 @@ import streamlit as st
 from groq import Groq
 import base64
 from gtts import gTTS
-import requests # GitHub API ke liye
+import requests
 
+# API Key check
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
     st.error("API Key missing!")
 
-# --- GITHUB CONFIG (Secrets mein daalein) ---
-# Streamlit secrets mein ye 3 cheezein zaroor add karein:
-# GITHUB_TOKEN = "aapka_personal_access_token"
-# GITHUB_REPO = "aapka_username/repo_naam"
-
 st.set_page_config(page_title="Pro AI", layout="wide")
 
+# --- CSS: EVERYTHING FIXED ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
-    .block-container {padding-bottom: 100px;}
-    
-    /* Menu Button 1cm Up */
-    div.stButton > button:first-child { margin-top: -40px !important; }
+    .block-container {padding-bottom: 120px;}
 
-    div[data-testid="stChatInput"] { margin-left: 50px !important; }
+    /* Menu Button 1cm Up */
+    div.stButton > button:first-child { 
+        margin-top: -40px !important; 
+        background-color: #FF4B4B !important;
+        color: white !important;
+    }
+
+    /* Plus Icon Positioning */
+    div[data-testid="stChatInput"] { margin-left: 60px !important; }
     
     .plus-icon-container {
         position: fixed; bottom: 32px; left: 15px;
         background-color: #FF4B4B; color: white;
-        border-radius: 50%; width: 40px; height: 40px;
+        border-radius: 50%; width: 45px; height: 45px;
         display: flex; align-items: center; justify-content: center;
         font-size: 30px; font-weight: bold; z-index: 1000;
+        border: 2px solid white;
     }
 
     div[data-testid="stFileUploader"] {
         position: fixed; bottom: 32px; left: 15px;
-        width: 40px; height: 40px; opacity: 0; z-index: 1001;
+        width: 45px; height: 45px; opacity: 0; z-index: 1001;
+        cursor: pointer;
     }
 
     .menu-card {
@@ -53,45 +57,46 @@ if "last_audio" not in st.session_state: st.session_state.last_audio = None
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
 st.title("🚀 Pro AI")
+
+# --- MENU BUTTON ---
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
+# --- MENU CONTENT (ABOUT, PRIVACY, TERMS, FEEDBACK) ---
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
     
-    # --- GITHUB FEEDBACK SECTION ---
-    st.subheader("📬 Send Feedback to GitHub")
-    feedback_msg = st.text_area("App ke baare mein likhein:", placeholder="Issue ya suggestion...")
-    
+    # 1. About Section
+    st.markdown("### 📖 About Pro AI")
+    st.write("Pro AI ek advanced vision assistant hai jo Llama 3.3 model ka use karta hai. Ye text aur photos dono ko samajh kar voice mein jawab deta hai.")
+
+    # 2. Privacy & Terms
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("#### 🔒 Privacy Policy")
+        st.write("Hum aapka data save nahi karte. Chats sirf temporary session ke liye hain.")
+    with col2:
+        st.markdown("#### ⚖️ Terms & Conditions")
+        st.write("Sirf legal use karein. AI accuracy ki koi guarantee nahi hai.")
+
+    st.divider()
+
+    # 3. GitHub Feedback Section
+    st.markdown("### 📬 Feedback (Send to Owner)")
+    feedback_msg = st.text_area("Hume batayein aapko app kaisa laga:", placeholder="Aapka feedback...")
     if st.button("Submit Feedback"):
         if feedback_msg:
             try:
-                # GitHub API Details
                 token = st.secrets["GITHUB_TOKEN"]
                 repo = st.secrets["GITHUB_REPO"]
                 url = f"https://api.github.com/repos/{repo}/issues"
-                
-                headers = {
-                    "Authorization": f"token {token}",
-                    "Accept": "application/vnd.github.v3+json"
-                }
-                data = {
-                    "title": "New User Feedback",
-                    "body": feedback_msg
-                }
-                
-                res = requests.post(url, json=data, headers=headers)
-                if res.status_code == 201:
-                    st.success("✅ Shukriya! Feedback GitHub Issues mein add ho gaya hai.")
-                else:
-                    st.error(f"❌ Error: {res.json().get('message')}")
-            except Exception as e:
-                st.error("Secrets mein GitHub Token setup karein!")
-        else:
-            st.warning("Kuch toh likhiye!")
-
+                headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
+                res = requests.post(url, json={"title": "User Feedback", "body": feedback_msg}, headers=headers)
+                if res.status_code == 201: st.success("✅ GitHub par feedback bhej diya gaya!")
+                else: st.error("❌ Token ya Repo check karein.")
+            except: st.error("Secrets setup karein!")
+    
     st.divider()
-    st.markdown("🔒 **Privacy:** No data saved. | ⚖️ **Terms:** Legal use only.")
     if st.button("🗑️ Clear All Chat"):
         st.session_state.messages = []
         st.session_state.last_audio = None
@@ -109,8 +114,7 @@ uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"], label_visibili
 if prompt := st.chat_input("Yahan puchiye..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
-    
-    # ... (Baaki AI logic same rahega) ...
+
     try:
         content = [{"type": "text", "text": f"System: Use full words. User: {prompt}"}]
         if uploaded_file:
