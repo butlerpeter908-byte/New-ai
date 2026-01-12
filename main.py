@@ -10,61 +10,76 @@ try:
 except:
     st.error("Pehle Streamlit Settings mein GROQ_API_KEY daalein!")
 
-st.set_page_config(page_title="Pro AI", layout="wide")
+st.set_page_config(page_title="Pro AI", layout="wide", initial_sidebar_state="expanded")
 
-# --- CSS: SIRF HEADER AUR WATERMARK HATANE KE LIYE (Sidebar ko chhod kar) ---
+# --- CSS: UI ko clean aur professional banane ke liye ---
 st.markdown("""
     <style>
-    /* Sirf upar ka header aur footer hatane ke liye */
-    header[data-testid="stHeader"] {display: none;}
-    footer {display: none;}
-    
-    /* Watermark aur Deploy button hatane ke liye */
+    header[data-testid="stHeader"] {visibility: hidden;}
+    footer {visibility: hidden;}
     div[data-testid="stStatusWidget"] {visibility: hidden;}
     .stDeployButton {display:none;}
     
-    /* Chat box watermark aur extra space fix */
-    div[data-testid="stChatInput"] label {display: none;}
-    
-    /* Sidebar ko properly dikhane ke liye styling */
+    /* Sidebar styling */
     section[data-testid="stSidebar"] {
-        background-color: #111;
+        background-color: #111111;
         border-right: 1px solid #333;
     }
     </style>
 """, unsafe_allow_html=True)
 
-st.title("🚀 Pro AI: Voice + Vision")
-
-# --- SIDEBAR (Ab ye dikhai dega) ---
-with st.sidebar:
-    st.title("⚙️ Settings")
-    voice_type = st.selectbox("Awaz Chunein:", ["Aarti (Female)", "Akash (Male)"])
-    tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
-    st.info("Yahan se aap voice change kar sakte hain.")
-
-# Session State
+# --- SESSION STATE ---
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
 
-# Chat history
+# --- PERMANENT MENU (SIDEBAR) ---
+with st.sidebar:
+    st.title("📂 Main Menu")
+    
+    # 1. VOICE SETTINGS
+    st.subheader("🔊 Voice Selection")
+    voice_type = st.selectbox("Awaz Chunein:", ["Aarti (Female)", "Akash (Male)"], key="voice_sel")
+    tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
+    
+    st.divider()
+    
+    # 2. THEME SETTINGS
+    st.subheader("🎨 Theme")
+    theme_choice = st.radio("App Look:", ["Classic Dark", "Midnight Black"], key="theme_sel")
+    if theme_choice == "Midnight Black":
+        st.markdown("<style>.stApp {background-color: #000000;}</style>", unsafe_allow_html=True)
+    
+    st.divider()
+    
+    # 3. HISTORY
+    st.subheader("📜 Chat History")
+    if st.button("Clear Chat"):
+        st.session_state.messages = []
+        st.session_state.last_audio = None
+        st.rerun()
+    
+    st.info(f"Total Messages: {len(st.session_state.messages)}")
+
+# --- MAIN CHAT AREA ---
+st.title("🚀 Pro AI: Voice + Vision")
+
+# Chat history display
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# Input Area
+# Input area
 uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
-if prompt := st.chat_input("Mujhse baat karein..."):
+if prompt := st.chat_input("Yahan kuch likhiye..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        # No Abbreviations instruction
-        instruction = "Respond naturally and fully. IMPORTANT: Do not use shortcuts like 'u', 'r', 'k'. Use full words."
+        instruction = "Respond naturally and fully. DO NOT use abbreviations. Write complete words."
         content = [{"type": "text", "text": f"{instruction}\n\nUser: {prompt}"}]
         
         if uploaded_file:
@@ -88,7 +103,7 @@ if prompt := st.chat_input("Mujhse baat karein..."):
             
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
-            # Audio generation
+            # Audio Generation
             tts = gTTS(text=full_res, lang='hi', tld=tld_choice)
             tts.save("temp.mp3")
             with open("temp.mp3", "rb") as f:
@@ -97,7 +112,7 @@ if prompt := st.chat_input("Mujhse baat karein..."):
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Audio Button (Fix)
+# Speaker button (Fix)
 if st.session_state.last_audio:
     if st.button("🔈 Suniye (Listen)"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
