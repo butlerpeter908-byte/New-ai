@@ -16,15 +16,14 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: UI FIXES (Fixing White Line & Mic Visibility) ---
+# --- CSS: UI FIXES (Persistent Icons & No White Lines) ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
-    .block-container {padding-bottom: 150px;}
+    .block-container {padding-bottom: 150px; padding-top: 2rem;}
     
-    /* White line fix: Removing extra gaps from empty containers */
-    .stEmpty, .stMarkdownContainer { margin: 0px; padding: 0px; }
+    .stEmpty { margin: 0px !important; padding: 0px !important; display: none; }
     
     div.stButton > button:first-child { 
         margin-top: -40px !important; 
@@ -43,7 +42,6 @@ st.markdown("""
         border: 2px solid white; 
     }
 
-    /* Mic Button: Higher Z-Index to stay visible */
     .mic-container { 
         position: fixed; bottom: 32px; left: 65px; 
         z-index: 1005 !important; 
@@ -68,25 +66,27 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if "last_audio" not in st.session_state: st.session_state.last_audio = None
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
 if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
+if "persistent_image" not in st.session_state: st.session_state.persistent_image = None
 
 st.title("🚀 Pro AI")
 
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
-# --- MENU SECTION (About, Privacy, Terms) ---
+# --- MENU SECTION ---
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
     st.subheader("📖 About Pro AI")
-    st.write("Pro AI ek advanced artificial intelligence assistant hai jo cutting-edge Vision aur Voice technology par kaam karta hai. Ye platform Llama 3.3 aur Whisper model ka upyog karta hai.")
+    st.write("Pro AI ek advanced assistant hai jo Vision aur Voice technology par kaam karta hai. Ye Llama 3.3 aur Whisper model use karta hai.")
     st.subheader("🔒 Privacy Policy")
-    st.write("Aapki privacy hamari priority hai. Pro AI kisi bhi tarah ka user data ya chat history save nahi karta. Sara data temporary session ke baad delete ho jata hai.")
+    st.write("Hum data save nahi karte. Aapki privacy priority hai. Temporary session ke baad sab delete ho jata hai.")
     st.subheader("⚖️ Terms & Conditions")
-    st.write("User ko is platform ka upyog sirf legal aur ethical purposes ke liye karna chahiye. AI accurate results ki guarantee nahi deta.")
+    st.write("Ise sirf legal purposes ke liye use karein. AI accuracy ki koi guarantee nahi hai.")
     st.divider()
     if st.button("🗑️ Clear All Chat"):
         st.session_state.messages = []
         st.session_state.last_audio = None
+        st.session_state.persistent_image = None
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -94,22 +94,27 @@ if st.session_state.show_menu:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# --- MIC & PLUS UI (Stable Containers) ---
-st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
-uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+# --- PERSISTENT IMAGE PREVIEW ---
+if st.session_state.persistent_image:
+    st.image(st.session_state.persistent_image, caption="Uploaded Photo", width=250)
 
-# Mic container outside chat logic to keep it visible
-mic_placeholder = st.container()
-with mic_placeholder:
-    st.markdown('<div class="mic-container">', unsafe_allow_html=True)
-    audio_data = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='recorder')
-    st.markdown('</div>', unsafe_allow_html=True)
+# --- INPUT UI ---
+st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
+new_photo = st.file_uploader("", type=["jpg", "png", "jpeg"], key="camera_uploader", label_visibility="collapsed")
+
+# Agar nayi photo upload hui hai toh use save karein
+if new_photo:
+    st.session_state.persistent_image = new_photo
+
+st.markdown('<div class="mic-container">', unsafe_allow_html=True)
+audio_data = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='recorder')
+st.markdown('</div>', unsafe_allow_html=True)
 
 voice_prompt = None
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
-        with st.spinner("Processing..."):
+        with st.spinner("Sun raha hoon..."):
             try:
                 with open("temp.wav", "wb") as f: f.write(audio_data['bytes'])
                 with open("temp.wav", "rb") as f:
@@ -129,13 +134,14 @@ if user_input:
 
     try:
         sys_info = f"CURRENT_TIME: {cur_time}, CURRENT_DATE: {cur_date}."
-        instruction = "Professional AI. Use numeric time ONLY if asked. No unnecessary mentions of time. Respond in Hindi-English mix."
+        instruction = "Professional AI. Analyze images if provided. Use numeric time ONLY if asked. Respond in Hindi-English mix."
         content = [{"type": "text", "text": f"{sys_info}\n{instruction}\nUser: {user_input}"}]
         
-        if uploaded_file:
-            img = base64.b64encode(uploaded_file.read()).decode('utf-8')
-            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
-            st.image(uploaded_file, width=150)
+        # Image ko analyze karne ke liye bhejna agar session mein hai
+        if st.session_state.persistent_image:
+            img_bytes = st.session_state.persistent_image.getvalue()
+            img_b64 = base64.b64encode(img_bytes).decode('utf-8')
+            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
 
         with st.chat_message("assistant"):
             full_res = ""
@@ -154,7 +160,6 @@ if user_input:
             st.rerun()
     except Exception as e: st.error(f"Error: {e}")
 
-# Audio Button (Fixing the gap)
 if st.session_state.last_audio:
     if st.button("🔈 Jawab Suniye"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
