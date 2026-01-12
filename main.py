@@ -17,13 +17,15 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: UI STABILITY ---
+# --- CSS: UI STABILITY & WHITE LINE REMOVAL ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 150px; padding-top: 2rem;}
     
+    /* Remove white lines/empty containers */
+    div[data-testid="stVerticalBlock"] > div:empty {display: none !important;}
     .stEmpty { margin: 0px !important; padding: 0px !important; display: none; }
     
     div.stButton > button:first-child { 
@@ -43,10 +45,7 @@ st.markdown("""
         border: 2px solid white; 
     }
 
-    .mic-container { 
-        position: fixed; bottom: 32px; left: 65px; 
-        z-index: 1005 !important; 
-    }
+    .mic-container { position: fixed; bottom: 32px; left: 65px; z-index: 1005 !important; }
 
     div[data-testid="stFileUploader"] { 
         position: fixed; bottom: 32px; left: 15px; 
@@ -54,35 +53,54 @@ st.markdown("""
         z-index: 1002; cursor: pointer; 
     }
 
-    .menu-card { 
-        background-color: #121212; padding: 25px; 
-        border-radius: 15px; border: 1px solid #FF4B4B; 
-        margin-bottom: 20px; 
-    }
+    .menu-card { background-color: #121212; padding: 25px; border-radius: 15px; border: 1px solid #FF4B4B; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
-# Session State Initialization
 if "messages" not in st.session_state: st.session_state.messages = []
 if "last_audio" not in st.session_state: st.session_state.last_audio = None
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
-if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
 if "img_data" not in st.session_state: st.session_state.img_data = None
+if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
 
 st.title("🚀 Pro AI")
 
+# --- MENU BUTTON ---
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
-# --- MENU SECTION ---
+# --- MENU CONTENT (ENGLISH) ---
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
+    
+    # 1. About Us
     st.subheader("📖 About Pro AI")
-    st.write("Pro AI ek vision aur voice powered assistant hai jo Llama 3.3 model use karta hai. Ye images analyze karne aur numeric time batane mein expert hai.")
+    st.write("""
+    Pro AI is an advanced artificial intelligence assistant powered by cutting-edge Vision and Voice technology. 
+    By leveraging state-of-the-art models like Llama 3.2 Vision and Whisper, this platform provides intelligent 
+    responses to text, images, and voice commands. Our mission is to offer a seamless personal assistant 
+    capable of analyzing complex visuals and providing real-time information with high efficiency.
+    """)
+
+    # 2. Privacy Policy
     st.subheader("🔒 Privacy Policy")
-    st.write("Hum aapka data save nahi karte. Har session temporary hota hai aur chat clear karne par sab erase ho jata hai.")
+    st.write("""
+    Your privacy is our utmost priority. Pro AI is designed to be a privacy-first platform; we do not store, 
+    save, or share any of your personal data, chat history, or uploaded images on our servers. 
+    All processing occurs within temporary sessions, and all data is immediately purged once the session ends 
+    or the chat is cleared. We do not use third-party tracking or sell user information to any external entities.
+    """)
+
+    # 3. Terms & Conditions
     st.subheader("⚖️ Terms & Conditions")
-    st.write("Ise sirf legal kaamo ke liye use karein. AI accuracy hamesha 100% nahi hoti.")
+    st.write("""
+    By using this application, you agree to use the platform solely for lawful and ethical purposes. 
+    Any attempt to upload harmful, abusive, or illegal content is strictly prohibited. 
+    Please note that while our AI is highly advanced, responses may not always be 100% accurate; 
+    users should verify critical information independently. Pro AI reserves the right to modify 
+    or terminate services at any time without prior notice.
+    """)
+
     st.divider()
     if st.button("🗑️ Clear All Chat"):
         st.session_state.messages = []
@@ -91,40 +109,40 @@ if st.session_state.show_menu:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
+# --- PHOTO HANDLING ---
+st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
+new_photo = st.file_uploader("", type=["jpg", "png", "jpeg"], key="camera_uploader", label_visibility="collapsed")
+
+if new_photo:
+    st.session_state.img_data = new_photo.getvalue()
+
+if st.session_state.img_data:
+    st.image(st.session_state.img_data, caption="Captured Image", width=250)
+    if st.button("❌ Remove Image"):
+        st.session_state.img_data = None
+        st.rerun()
+
 # --- CHAT AREA ---
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# --- PHOTO PERSISTENCE LOGIC ---
-st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
-new_photo = st.file_uploader("", type=["jpg", "png", "jpeg"], key="camera_uploader", label_visibility="collapsed")
-
-# Agar nayi photo aayi hai, toh bytes nikaal kar session mein lock karo
-if new_photo:
-    st.session_state.img_data = new_photo.getvalue()
-
-# Agar session mein photo hai, toh preview dikhao (refresh ke baad bhi dikhega)
-if st.session_state.img_data:
-    st.image(st.session_state.img_data, caption="Selected Photo", width=250)
-
-# --- MIC UI ---
+# --- MIC ---
 st.markdown('<div class="mic-container">', unsafe_allow_html=True)
 audio_data = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='recorder')
 st.markdown('</div>', unsafe_allow_html=True)
 
 voice_prompt = None
-if audio_data:
-    if st.session_state.last_audio_id != audio_data['id']:
-        st.session_state.last_audio_id = audio_data['id']
-        with st.spinner("Processing Voice..."):
-            try:
-                with open("temp.wav", "wb") as f: f.write(audio_data['bytes'])
-                with open("temp.wav", "rb") as f:
-                    transcription = client.audio.transcriptions.create(file=("temp.wav", f.read()), model="whisper-large-v3", response_format="text")
-                voice_prompt = transcription
-            except: st.error("Mic issue.")
+if audio_data and st.session_state.last_audio_id != audio_data['id']:
+    st.session_state.last_audio_id = audio_data['id']
+    with st.spinner("Listening..."):
+        try:
+            with open("temp.wav", "wb") as f: f.write(audio_data['bytes'])
+            with open("temp.wav", "rb") as f:
+                transcription = client.audio.transcriptions.create(file=("temp.wav", f.read()), model="whisper-large-v3", response_format="text")
+            voice_prompt = transcription
+        except: st.error("Mic issue.")
 
-user_input = voice_prompt if voice_prompt else st.chat_input("Yahan puchiye...")
+user_input = voice_prompt if voice_prompt else st.chat_input("Ask me anything...")
 
 if user_input:
     IST = pytz.timezone('Asia/Kolkata')
@@ -135,19 +153,25 @@ if user_input:
     with st.chat_message("user"): st.markdown(user_input)
 
     try:
-        sys_info = f"CURRENT_TIME: {cur_time}, CURRENT_DATE: {cur_date}."
-        instruction = "Professional AI. Analyze image if provided. Mention time/date ONLY if asked. Respond in Hindi-English mix."
-        content = [{"type": "text", "text": f"{sys_info}\n{instruction}\nUser: {user_input}"}]
+        # Vision-Ready content format
+        content_list = [{"type": "text", "text": f"System Time: {cur_time}, Date: {cur_date}. User Question: {user_input}"}]
         
-        # Image analysis check
         if st.session_state.img_data:
-            img_b64 = base64.b64encode(st.session_state.img_data).decode('utf-8')
-            content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}})
+            base64_image = base64.b64encode(st.session_state.img_data).decode('utf-8')
+            content_list.append({
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
+            })
 
         with st.chat_message("assistant"):
             full_res = ""
             res_box = st.empty()
-            comp = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": content}], stream=True)
+            # Fixed Vision Model
+            comp = client.chat.completions.create(
+                model="llama-3.2-11b-vision-preview",
+                messages=[{"role": "user", "content": content_list}],
+                stream=True
+            )
             for chunk in comp:
                 if chunk.choices[0].delta.content:
                     full_res += chunk.choices[0].delta.content
@@ -162,6 +186,6 @@ if user_input:
     except Exception as e: st.error(f"Error: {e}")
 
 if st.session_state.last_audio:
-    if st.button("🔈 Jawab Suniye"):
+    if st.button("🔈 Hear Response"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
         
