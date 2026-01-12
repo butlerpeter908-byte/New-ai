@@ -10,25 +10,34 @@ try:
 except:
     st.error("Pehle Streamlit Settings mein GROQ_API_KEY daalein!")
 
-st.set_page_config(page_title="Pro AI", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: POORI SCREEN KHAALI RAKHNE KE LIYE ---
+# --- CSS: EK DAM CLEAN LOOK & RED BUTTONS ---
 st.markdown("""
     <style>
-    /* Header, Footer aur Deploy button gayab */
+    [data-testid="stSidebar"] {display: none;}
     header, footer, .stDeployButton {visibility: hidden;}
     
-    /* Sidebar (Menu) ki styling */
-    [data-testid="stSidebar"] {
-        background-color: #111111;
-        border-right: 2px solid #FF4B4B;
+    /* Main Screen padding */
+    .block-container {padding-top: 1rem; padding-bottom: 5rem;}
+
+    /* Custom Menu Styling */
+    .menu-card {
+        background-color: #1a1a1a;
+        padding: 15px;
+        border-radius: 12px;
+        border: 1px solid #FF4B4B;
+        margin-bottom: 20px;
     }
     
-    /* Main Chat Area ko clean rakhna */
-    .block-container {padding-top: 2rem;}
-    
-    /* Red Button for Sidebar Toggle (Custom Look) */
-    div[data-testid="stSidebarNav"] {display: none;}
+    /* Red Button Styling */
+    div.stButton > button {
+        background-color: #FF4B4B !important;
+        color: white !important;
+        border-radius: 8px !important;
+        border: none !important;
+        width: 100%;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -37,45 +46,47 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
+if "show_menu" not in st.session_state:
+    st.session_state.show_menu = False
 
-# --- MENU BUTTON (SIDEBAR KE ANDAR) ---
-with st.sidebar:
-    st.title("🔴 Pro AI Menu")
-    st.divider()
+st.title("🚀 Pro AI")
+
+# --- CUSTOM MENU BUTTON (POORI SCREEN KHAALI RAKHNE KE LIYE) ---
+col_m1, col_m2 = st.columns([1, 4])
+with col_m1:
+    if st.button("☰ MENU"):
+        st.session_state.show_menu = not st.session_state.show_menu
+
+# Jab user Menu click karega tabhi ye dikhega
+if st.session_state.show_menu:
+    st.markdown('<div class="menu-card">', unsafe_allow_html=True)
+    st.subheader("🔴 App Options")
     
     # Options inside Menu
-    with st.expander("ℹ️ About & Model"):
-        st.write("Pro AI Llama 3.3 model par chalta hai jo text aur images samajhta hai.")
-    
-    with st.expander("⚖️ Terms & Conditions"):
-        st.write("1. Legal use only.\n2. No data storage.\n3. AI can be wrong.\n4. User is responsible.")
-    
-    with st.expander("🔒 Privacy Policy"):
-        st.write("Hum aapka koi bhi personal data ya images save nahi karte.")
+    st.markdown("**📖 About:** Llama 3.3 Voice & Vision AI.")
+    st.markdown("**⚖️ Terms:** Legal use only. No data stored.")
+    st.markdown("**🔒 Privacy:** We don't save your images/chats.")
     
     st.divider()
-    
-    # Feedback inside Menu
-    st.subheader("📬 Feedback")
-    f_text = st.text_input("App kaisa laga?")
-    if st.button("Submit"):
+    # Feedback
+    feedback = st.text_input("📬 Feedback dein:", placeholder="App kaisa laga?")
+    if st.button("Send Feedback"):
         st.toast("Shukriya!")
-    
+        
     st.divider()
-    if st.button("🗑️ Clear Chat"):
+    # Clear Chat
+    if st.button("🗑️ Clear All Chat"):
         st.session_state.messages = []
         st.session_state.last_audio = None
         st.rerun()
+    st.markdown('</div>', unsafe_allow_html=True)
 
-# --- MAIN SCREEN (KHAALI AUR CLEAN) ---
-st.title("🚀 Pro AI")
-
-# Chat container
+# --- CHAT AREA ---
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# Input area (Bottom)
+# --- INPUT AREA (STICKY AT BOTTOM) ---
 uploaded_file = st.file_uploader("Upload", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
 if prompt := st.chat_input("Yahan puchiye..."):
@@ -84,7 +95,7 @@ if prompt := st.chat_input("Yahan puchiye..."):
         st.markdown(prompt)
 
     try:
-        sys_prompt = "Professional AI. Use full words only. No shortcuts."
+        sys_prompt = "Professional AI. Use 100% full words. No shortcuts."
         content = [{"type": "text", "text": f"{sys_prompt}\n\nUser: {prompt}"}]
         
         if uploaded_file:
@@ -102,7 +113,7 @@ if prompt := st.chat_input("Yahan puchiye..."):
             res_box.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
-            # Voice Generation (Aarti)
+            # Voice Generation
             tts = gTTS(text=full_res, lang='hi', tld='com.au', slow=False)
             tts.save("voice.mp3")
             with open("voice.mp3", "rb") as f:
@@ -112,7 +123,7 @@ if prompt := st.chat_input("Yahan puchiye..."):
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Audio button (Sirf jawab ke baad dikhega)
+# Audio button
 if st.session_state.last_audio:
     if st.button("🔈 Suniye"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
