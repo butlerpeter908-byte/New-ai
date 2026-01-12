@@ -20,7 +20,7 @@ st.markdown("""
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
     
-    /* Buttons & Selectbox Red Styling */
+    /* Red Styling for Buttons & Selectbox */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         border: 2px solid #FF4B4B !important;
         border-radius: 10px;
@@ -33,10 +33,19 @@ st.markdown("""
         width: 100%;
     }
     div[data-testid="stChatInput"] label {display: none;}
+    
+    /* Info Section Styling */
+    .info-box {
+        background-color: #1e1e1e;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 5px solid #FF4B4B;
+        margin-bottom: 20px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
-# Session State for persistency
+# Session State
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_audio" not in st.session_state:
@@ -44,15 +53,24 @@ if "last_audio" not in st.session_state:
 
 st.title("🚀 Pro AI: Voice + Vision")
 
+# --- PERMANENT INFO SECTION (About, Privacy, Terms) ---
+st.markdown("""
+<div class="info-box">
+    <b>📖 About:</b> Pro AI ek smart assistant hai jo text aur images ko samajhta hai.<br>
+    <b>🔒 Privacy:</b> Aapka chat aur image data kahi bhi save nahi kiya jata.<br>
+    <b>⚖️ Terms:</b> Ise sirf legal kaam ke liye use karein. AI galat jankari de sakta hai.<br>
+    <b>📝 Feedback:</b> Niche diye gaye box mein apni raye dein!
+</div>
+""", unsafe_allow_html=True)
+
 # Display history
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# --- RED MENU BAR (Near Chat Input) ---
+# --- RED MENU BAR ---
 st.divider()
 c1, c2, c3 = st.columns([2, 2, 1])
-
 with c1:
     v_type = st.selectbox("Voice", ["Aarti (Female)", "Akash (Male)"], label_visibility="collapsed", key="v_final")
 with c2:
@@ -66,7 +84,7 @@ with c3:
         st.rerun()
 
 # --- INPUT SECTION ---
-uploaded_file = st.file_uploader("Upload", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
 if prompt := st.chat_input("Mujhse baat karein..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -74,9 +92,7 @@ if prompt := st.chat_input("Mujhse baat karein..."):
         st.markdown(prompt)
 
     try:
-        # Strict instruction for Full words
-        sys_prompt = "You are a professional AI. Respond naturally in user's language. IMPORTANT: Use 100% full words. Never use 'u', 'r', 'k', or 'pls'. Use 'you', 'are', 'okay', 'please'."
-        
+        sys_prompt = "You are a professional AI. Use 100% full words. No abbreviations like 'u', 'r', 'k'."
         content = [{"type": "text", "text": f"{sys_prompt}\n\nUser: {prompt}"}]
         
         if uploaded_file:
@@ -87,32 +103,34 @@ if prompt := st.chat_input("Mujhse baat karein..."):
         with st.chat_message("assistant"):
             full_res = ""
             res_box = st.empty()
-            comp = client.chat.completions.create(
-                model="llama-3.3-70b-versatile", 
-                messages=[{"role": "user", "content": content}], 
-                stream=True
-            )
+            comp = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": content}], stream=True)
             for chunk in comp:
                 if chunk.choices[0].delta.content:
                     full_res += chunk.choices[0].delta.content
                     res_box.markdown(full_res + "▌")
             res_box.markdown(full_res)
-            
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
-            # --- AUDIO ENGINE (Aarti vs Akash) ---
-            # Aarti = Australian (Fast & High Pitch), Akash = Indian (Deep & Fast)
+            # Audio Engine
             tld = 'com.au' if v_type == "Aarti (Female)" else 'co.in'
-            
             tts = gTTS(text=full_res, lang='hi', tld=tld, slow=False)
             tts.save("voice.mp3")
             with open("voice.mp3", "rb") as f:
                 st.session_state.last_audio = f.read()
-
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Audio Button
+# Audio & Feedback Section
 if st.session_state.last_audio:
     if st.button("🔈 Suniye (Listen)"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
+
+st.divider()
+# --- FEEDBACK OPTION ---
+st.subheader("📬 Feedback")
+feedback_text = st.text_area("Hume batayein aapko ye app kaisa laga:", placeholder="Yahan likhein...", label_visibility="collapsed")
+if st.button("Send Feedback"):
+    if feedback_text:
+        st.success("Shukriya! Aapka feedback submit ho gaya hai.")
+    else:
+        st.warning("Pehle kuch likhiye!")
