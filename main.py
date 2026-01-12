@@ -4,62 +4,56 @@ import base64
 from gtts import gTTS
 import os
 
-# Secrets check
+# 1. Faltu Theme Code Hata diya (Default Streamlit theme use hogi jo stable hai)
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
     st.error("Pehle Streamlit Settings mein GROQ_API_KEY daalein!")
 
-# --- UI SETTINGS & THEMES ---
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# CSS: GitHub icon aur menu ko chhupane ke liye
-hide_style = """
+# 3. Header Hide aur Watermark removal (Clean UI)
+st.markdown("""
     <style>
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
     header {visibility: hidden;}
+    div[data-testid="stStatusWidget"] {visibility: hidden;}
+    .stDeployButton {display:none;}
+    /* Chat input watermark fix */
+    div[data-testid="stChatInput"] label {display: none;}
     </style>
-"""
-st.markdown(hide_style, unsafe_allow_html=True)
-
-# Sidebar for Theme and Voice
-st.sidebar.title("🎨 Customization")
-theme_choice = st.sidebar.selectbox("Theme Chunein:", ["Default Dark", "Ocean Blue", "Soft Purple", "Midnight"])
-
-# Theme Colors Setup
-if theme_choice == "Ocean Blue":
-    st.markdown("<style>body { background-color: #0E1117; color: #E0F2F1; } .stApp { background-image: linear-gradient(to right, #1a2a6c, #b21f1f, #fdbb2d); }</style>", unsafe_allow_html=True)
-elif theme_choice == "Soft Purple":
-    st.markdown("<style>.stApp { background: linear-gradient(90deg, #4b6cb7 0%, #182848 100%); }</style>", unsafe_allow_html=True)
-elif theme_choice == "Midnight":
-    st.markdown("<style>.stApp { background-color: #000000; }</style>", unsafe_allow_html=True)
-
-st.sidebar.divider()
-st.sidebar.title("🔊 Audio Settings")
-voice_type = st.sidebar.selectbox("Awaz Chunein:", ["Aarti (Female)", "Akash (Male)"])
-tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
+""", unsafe_allow_html=True)
 
 st.title("🚀 Pro AI: Voice + Vision")
 
+# Settings Sidebar
+st.sidebar.title("Settings")
+voice_type = st.sidebar.selectbox("Awaz Chunein:", ["Aarti (Female)", "Akash (Male)"])
+tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
+if "last_audio" not in st.session_state:
+    st.session_state.last_audio = None
 
 # Chat history dikhana
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# --- CHAT INPUT AUR UPLOAD ---
-uploaded_file = st.file_uploader("Upload Image (Optional)", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+# Input area
+uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
-if prompt := st.chat_input("Mujhse apni bhasha mein baat karein..."):
+if prompt := st.chat_input("Mujhse baat karein..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        instruction = "Respond naturally and fully in the user's language. DO NOT use abbreviations/shortcuts. Use professional and clear words."
+        # 4. No Abbreviations (Sakht instruction taki AI 'u', 'r', 'k' use na kare)
+        instruction = "Respond naturally and fully in the user's language. IMPORTANT: Do not use any shortcuts, abbreviations, or SMS language. Write every word completely (e.g., use 'you' instead of 'u', 'okay' instead of 'k')."
+        
         content = [{"type": "text", "text": f"{instruction}\n\nUser: {prompt}"}]
         
         if uploaded_file:
@@ -68,8 +62,8 @@ if prompt := st.chat_input("Mujhse apni bhasha mein baat karein..."):
             st.image(uploaded_file, width=150)
 
         with st.chat_message("assistant"):
-            res_box = st.empty()
             full_res = ""
+            res_box = st.empty()
             comp = client.chat.completions.create(
                 model="llama-3.3-70b-versatile", 
                 messages=[{"role": "user", "content": content}], 
@@ -81,19 +75,18 @@ if prompt := st.chat_input("Mujhse apni bhasha mein baat karein..."):
                     res_box.markdown(full_res + "▌")
             res_box.markdown(full_res)
             
-            # --- AUDIO BUTTON ---
-            if st.button("🔈 Suniye (Listen)"):
-                with st.spinner("Awaz taiyaar ho rahi hai..."):
-                    try:
-                        if os.path.exists("response.mp3"):
-                            os.remove("response.mp3")
-                        tts = gTTS(text=full_res, lang='hi', tld=tld_choice)
-                        tts.save("response.mp3")
-                        st.audio("response.mp3", format="audio/mp3", autoplay=True)
-                    except Exception as voice_err:
-                        st.error("Audio error!")
-            
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
+            # 2. Audio Fix (Session state mein audio bytes save karna taki button kaam kare)
+            tts = gTTS(text=full_res, lang='hi', tld=tld_choice)
+            tts.save("temp.mp3")
+            with open("temp.mp3", "rb") as f:
+                st.session_state.last_audio = f.read()
+
     except Exception as e:
         st.error(f"Error: {e}")
+
+# Speaker button display (Audio fix ka hissa)
+if st.session_state.last_audio:
+    if st.button("🔈 Suniye (Listen)"):
+        st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
