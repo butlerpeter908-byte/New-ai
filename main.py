@@ -2,6 +2,7 @@ import streamlit as st
 from groq import Groq
 import base64
 from gtts import gTTS
+import os
 
 # Secrets se API Key uthana
 try:
@@ -12,31 +13,31 @@ except:
 st.set_page_config(page_title="Pro AI", layout="wide")
 st.title("🚀 Pro AI: Voice + Vision")
 
-# Chat History setup
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Sidebar mein sirf Voice selection rakha hai
-voice_type = st.sidebar.selectbox("Voice Gender:", ["Female (Aarti)", "Male (Akash)"])
+# --- SIDEBAR (Voice Selection) ---
+st.sidebar.title("Settings")
+voice_type = st.sidebar.selectbox("Awaz Chunein:", ["Aarti (Female)", "Akash (Male)"])
 
-# Chat history dikhane ke liye
+# Voice settings fix
+tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
+
+# Chat history dikhana
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# --- CHAT INPUT AUR UPLOAD EK SAATH ---
-# Chat box ke thik upar upload ka chota option
+# --- CHAT INPUT AUR UPLOAD ---
 uploaded_file = st.file_uploader("Upload Image (Optional)", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
 if prompt := st.chat_input("Mujhse apni bhasha mein baat karein..."):
-    # User message save karna
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        # Prompt ko instruct karna ki usi language mein jawab de
-        content = [{"type": "text", "text": f"Please respond naturally in the same language as the user: {prompt}"}]
+        content = [{"type": "text", "text": f"Respond naturally in the same language as the user: {prompt}"}]
         
         if uploaded_file:
             img = base64.b64encode(uploaded_file.read()).decode('utf-8')
@@ -46,7 +47,6 @@ if prompt := st.chat_input("Mujhse apni bhasha mein baat karein..."):
         with st.chat_message("assistant"):
             res_box = st.empty()
             full_res = ""
-            # Naya fast model use ho raha hai
             comp = client.chat.completions.create(
                 model="llama-3.3-70b-versatile", 
                 messages=[{"role": "user", "content": content}], 
@@ -58,11 +58,15 @@ if prompt := st.chat_input("Mujhse apni bhasha mein baat karein..."):
                     res_box.markdown(full_res + "▌")
             res_box.markdown(full_res)
             
-            # Voice Output (User ki bhasha ke hisaab se)
-            tld = 'co.in' if voice_type == "Male (Akash)" else 'com'
-            tts = gTTS(text=full_res, lang='hi', tld=tld) # 'hi' works well for Hindi/Hinglish
-            tts.save("res.mp3")
-            st.audio("res.mp3", format="audio/mp3", autoplay=True)
+            # --- MANUAL AUDIO OPTION ---
+            # Jab tak user button nahi dabayega, awaz nahi aayegi
+            if st.button("🔈 Suniye (Listen)"):
+                try:
+                    tts = gTTS(text=full_res, lang='hi', tld=tld_choice)
+                    tts.save("response.mp3")
+                    st.audio("response.mp3", format="audio/mp3", autoplay=True)
+                except Exception as voice_err:
+                    st.error("Audio generate nahi ho paya.")
             
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
