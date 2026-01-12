@@ -12,7 +12,7 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: RED BUTTONS & CLEAN UI ---
+# --- CSS: RED MENU & CLEAN LOOK ---
 st.markdown("""
     <style>
     [data-testid="stSidebar"] {display: none;}
@@ -20,7 +20,7 @@ st.markdown("""
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
     
-    /* Red Styling for Menu */
+    /* Buttons & Selectbox Red Styling */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         border: 2px solid #FF4B4B !important;
         border-radius: 10px;
@@ -30,12 +30,13 @@ st.markdown("""
         color: white !important;
         border-radius: 10px;
         font-weight: bold;
+        width: 100%;
     }
     div[data-testid="stChatInput"] label {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
-# Session State
+# Session State for persistency
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_audio" not in st.session_state:
@@ -43,43 +44,40 @@ if "last_audio" not in st.session_state:
 
 st.title("🚀 Pro AI: Voice + Vision")
 
-# --- CHAT HISTORY ---
+# Display history
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# --- RED MENU NEAR CHAT BOX ---
+# --- RED MENU BAR (Near Chat Input) ---
 st.divider()
-col1, col2, col3 = st.columns([2, 2, 1])
+c1, c2, c3 = st.columns([2, 2, 1])
 
-with col1:
-    voice_type = st.selectbox("🔊 Voice", ["Aarti (Female)", "Akash (Male)"], label_visibility="collapsed")
-    # Voice selection logic fix
-    tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
-    lang_code = 'hi'
-
-with col2:
-    theme_choice = st.selectbox("🎨 Theme", ["Dark", "Midnight"], label_visibility="collapsed")
-    if theme_choice == "Midnight":
+with c1:
+    v_type = st.selectbox("Voice", ["Aarti (Female)", "Akash (Male)"], label_visibility="collapsed", key="v_final")
+with c2:
+    t_type = st.selectbox("Theme", ["Dark", "Midnight"], label_visibility="collapsed", key="t_final")
+    if t_type == "Midnight":
         st.markdown("<style>.stApp {background-color: #000000;}</style>", unsafe_allow_html=True)
-
-with col3:
+with c3:
     if st.button("🗑️ Clear"):
         st.session_state.messages = []
         st.session_state.last_audio = None
         st.rerun()
 
-# --- INPUT AREA ---
-uploaded_file = st.file_uploader("Upload Image", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+# --- INPUT SECTION ---
+uploaded_file = st.file_uploader("Upload", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
-if prompt := st.chat_input("Yahan kuch puchiye..."):
+if prompt := st.chat_input("Mujhse baat karein..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        instruction = "Respond naturally and fully. IMPORTANT: No shortcuts like 'u' or 'k'. Use full words always."
-        content = [{"type": "text", "text": f"{instruction}\n\nUser: {prompt}"}]
+        # Strict instruction for Full words
+        sys_prompt = "You are a professional AI. Respond naturally in user's language. IMPORTANT: Use 100% full words. Never use 'u', 'r', 'k', or 'pls'. Use 'you', 'are', 'okay', 'please'."
+        
+        content = [{"type": "text", "text": f"{sys_prompt}\n\nUser: {prompt}"}]
         
         if uploaded_file:
             img = base64.b64encode(uploaded_file.read()).decode('utf-8')
@@ -102,17 +100,19 @@ if prompt := st.chat_input("Yahan kuch puchiye..."):
             
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
-            # --- FIXED VOICE & SPEED (1.25x effect) ---
-            # gTTS slow=False se speed normal se thodi fast ho jati hai
-            tts = gTTS(text=full_res, lang=lang_code, tld=tld_choice, slow=False)
-            tts.save("temp.mp3")
-            with open("temp.mp3", "rb") as f:
+            # --- AUDIO ENGINE (Aarti vs Akash) ---
+            # Aarti = Australian (Fast & High Pitch), Akash = Indian (Deep & Fast)
+            tld = 'com.au' if v_type == "Aarti (Female)" else 'co.in'
+            
+            tts = gTTS(text=full_res, lang='hi', tld=tld, slow=False)
+            tts.save("voice.mp3")
+            with open("voice.mp3", "rb") as f:
                 st.session_state.last_audio = f.read()
 
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Suniye Button
+# Audio Button
 if st.session_state.last_audio:
-    if st.button("🔈 Suniye"):
+    if st.button("🔈 Suniye (Listen)"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
