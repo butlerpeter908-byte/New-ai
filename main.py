@@ -10,36 +10,25 @@ try:
 except:
     st.error("Pehle Streamlit Settings mein GROQ_API_KEY daalein!")
 
-st.set_page_config(page_title="Pro AI", layout="wide")
+st.set_page_config(page_title="Pro AI", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: RED THEME & CHAT FOCUS ---
+# --- CSS: POORI SCREEN KHAALI RAKHNE KE LIYE ---
 st.markdown("""
     <style>
-    [data-testid="stSidebar"] {display: none;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
-    .stDeployButton {display:none;}
+    /* Header, Footer aur Deploy button gayab */
+    header, footer, .stDeployButton {visibility: hidden;}
     
-    /* Footer for Terms */
-    .legal-footer {
-        position: fixed;
-        bottom: 80px;
-        left: 0;
-        width: 100%;
-        background: rgba(0,0,0,0.8);
-        color: #888;
-        font-size: 10px;
-        text-align: center;
-        padding: 5px;
-        z-index: 100;
+    /* Sidebar (Menu) ki styling */
+    [data-testid="stSidebar"] {
+        background-color: #111111;
+        border-right: 2px solid #FF4B4B;
     }
     
-    /* Red Button Styling */
-    button[kind="secondary"] {
-        background-color: #FF4B4B !important;
-        color: white !important;
-        border-radius: 10px;
-    }
+    /* Main Chat Area ko clean rakhna */
+    .block-container {padding-top: 2rem;}
+    
+    /* Red Button for Sidebar Toggle (Custom Look) */
+    div[data-testid="stSidebarNav"] {display: none;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -49,47 +38,53 @@ if "messages" not in st.session_state:
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
 
-st.title("🚀 Pro AI")
-
-# --- PERMANENT TERMS & ABOUT (TOP) ---
-st.info("ℹ️ **About:** Pro AI text/images samajhta hai. **Privacy:** No data saved. **Terms:** Ise legal kaam ke liye hi use karein. AI galat jawab de sakta hai.")
-
-# Chat history
-for m in st.session_state.messages:
-    with st.chat_message(m["role"]):
-        st.markdown(m["content"])
-
-# --- FIXED BOTTOM UI ---
-st.divider()
-c1, c2 = st.columns([2, 1])
-with c1:
-    # Single voice used internally (No dropdown)
-    st.write("🎙️ Voice: Aarti (Active)")
-with c2:
+# --- MENU BUTTON (SIDEBAR KE ANDAR) ---
+with st.sidebar:
+    st.title("🔴 Pro AI Menu")
+    st.divider()
+    
+    # Options inside Menu
+    with st.expander("ℹ️ About & Model"):
+        st.write("Pro AI Llama 3.3 model par chalta hai jo text aur images samajhta hai.")
+    
+    with st.expander("⚖️ Terms & Conditions"):
+        st.write("1. Legal use only.\n2. No data storage.\n3. AI can be wrong.\n4. User is responsible.")
+    
+    with st.expander("🔒 Privacy Policy"):
+        st.write("Hum aapka koi bhi personal data ya images save nahi karte.")
+    
+    st.divider()
+    
+    # Feedback inside Menu
+    st.subheader("📬 Feedback")
+    f_text = st.text_input("App kaisa laga?")
+    if st.button("Submit"):
+        st.toast("Shukriya!")
+    
+    st.divider()
     if st.button("🗑️ Clear Chat"):
         st.session_state.messages = []
         st.session_state.last_audio = None
         st.rerun()
 
-# Feedback (Small)
-with st.expander("📬 Feedback"):
-    f_text = st.text_input("Aapka feedback?")
-    if st.button("Send"):
-        st.toast("Shukriya!")
+# --- MAIN SCREEN (KHAALI AUR CLEAN) ---
+st.title("🚀 Pro AI")
 
-# Terms & Conditions (Fixed at bottom)
-st.markdown('<div class="legal-footer">Terms: Legal use only. User is responsible for content. AI accuracy not guaranteed. No data storage.</div>', unsafe_allow_html=True)
+# Chat container
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
 
-# Input
-uploaded_file = st.file_uploader("Image Upload", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
+# Input area (Bottom)
+uploaded_file = st.file_uploader("Upload", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
-if prompt := st.chat_input("Puchiye..."):
+if prompt := st.chat_input("Yahan puchiye..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
-        sys_prompt = "Professional AI. Use 100% full words. No shortcuts like 'u' or 'k'."
+        sys_prompt = "Professional AI. Use full words only. No shortcuts."
         content = [{"type": "text", "text": f"{sys_prompt}\n\nUser: {prompt}"}]
         
         if uploaded_file:
@@ -107,7 +102,7 @@ if prompt := st.chat_input("Puchiye..."):
             res_box.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
-            # Fast Voice Generation (Aarti)
+            # Voice Generation (Aarti)
             tts = gTTS(text=full_res, lang='hi', tld='com.au', slow=False)
             tts.save("voice.mp3")
             with open("voice.mp3", "rb") as f:
@@ -117,7 +112,7 @@ if prompt := st.chat_input("Puchiye..."):
     except Exception as e:
         st.error(f"Error: {e}")
 
-# Audio Button
+# Audio button (Sirf jawab ke baad dikhega)
 if st.session_state.last_audio:
-    if st.button("🔈 Jawab Suniye"):
+    if st.button("🔈 Suniye"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
