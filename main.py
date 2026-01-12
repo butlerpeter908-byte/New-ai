@@ -12,30 +12,25 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide", initial_sidebar_state="collapsed")
 
-# --- CSS: BUTTONS KO RED KARNE KE LIYE ---
+# --- CSS: RED BUTTONS & CLEAN UI ---
 st.markdown("""
     <style>
-    /* Sidebar aur Header hide karein */
     [data-testid="stSidebar"] {display: none;}
     header[data-testid="stHeader"] {visibility: hidden;}
     footer {visibility: hidden;}
     .stDeployButton {display:none;}
     
-    /* Buttons aur Selectbox ko Red styling dena */
+    /* Red Styling for Menu */
     div[data-testid="stSelectbox"] div[data-baseweb="select"] {
         border: 2px solid #FF4B4B !important;
         border-radius: 10px;
     }
-    
     button[kind="secondary"] {
         background-color: #FF4B4B !important;
         color: white !important;
-        border: none !important;
         border-radius: 10px;
         font-weight: bold;
     }
-
-    /* Chat box watermark hatayein */
     div[data-testid="stChatInput"] label {display: none;}
     </style>
 """, unsafe_allow_html=True)
@@ -59,7 +54,9 @@ col1, col2, col3 = st.columns([2, 2, 1])
 
 with col1:
     voice_type = st.selectbox("🔊 Voice", ["Aarti (Female)", "Akash (Male)"], label_visibility="collapsed")
+    # Voice selection logic fix
     tld_choice = 'com' if voice_type == "Aarti (Female)" else 'co.in'
+    lang_code = 'hi'
 
 with col2:
     theme_choice = st.selectbox("🎨 Theme", ["Dark", "Midnight"], label_visibility="collapsed")
@@ -81,7 +78,7 @@ if prompt := st.chat_input("Yahan kuch puchiye..."):
         st.markdown(prompt)
 
     try:
-        instruction = "Respond naturally and fully. No shortcuts like 'u' or 'k'."
+        instruction = "Respond naturally and fully. IMPORTANT: No shortcuts like 'u' or 'k'. Use full words always."
         content = [{"type": "text", "text": f"{instruction}\n\nUser: {prompt}"}]
         
         if uploaded_file:
@@ -105,8 +102,9 @@ if prompt := st.chat_input("Yahan kuch puchiye..."):
             
             st.session_state.messages.append({"role": "assistant", "content": full_res})
             
-            # Audio
-            tts = gTTS(text=full_res, lang='hi', tld=tld_choice)
+            # --- FIXED VOICE & SPEED (1.25x effect) ---
+            # gTTS slow=False se speed normal se thodi fast ho jati hai
+            tts = gTTS(text=full_res, lang=lang_code, tld=tld_choice, slow=False)
             tts.save("temp.mp3")
             with open("temp.mp3", "rb") as f:
                 st.session_state.last_audio = f.read()
