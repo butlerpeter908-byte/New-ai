@@ -40,7 +40,7 @@ if st.session_state.usage_count < 5:
             with st.chat_message("assistant"):
                 res_box = st.empty()
                 full_res = ""
-                comp = client.chat.completions.create(model="llama-3.2-11b-vision-preview", messages=[{"role": "user", "content": content}], stream=True)
+                comp = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": content}], stream=True)
                 for chunk in comp:
                     if chunk.choices[0].delta.content:
                         full_res += chunk.choices[0].delta.content
