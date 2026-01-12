@@ -16,7 +16,7 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: FIXED UI (No White Lines) ---
+# --- CSS: REMOVED IMAGE ICON & CENTERED MIC ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
@@ -29,22 +29,26 @@ st.markdown("""
         background-color: #FF4B4B !important; 
         color: white !important;
     }
-    div[data-testid="stChatInput"] { margin-left: 110px !important; }
     
-    .plus-icon-container { 
-        position: fixed; bottom: 32px; left: 15px; 
-        background-color: #FF4B4B; color: white; 
-        border-radius: 50%; width: 42px; height: 42px; 
-        display: flex; align-items: center; justify-content: center; 
-        font-size: 25px; font-weight: bold; z-index: 1000; 
-        border: 2px solid white; 
+    /* Input Box shift to make space for Mic */
+    div[data-testid="stChatInput"] { margin-left: 60px !important; }
+    
+    /* Centered Mic Icon (Image Icon Removed) */
+    .mic-container { 
+        position: fixed; 
+        bottom: 32px; 
+        left: 15px; 
+        z-index: 1005 !important; 
+        background-color: #FF4B4B;
+        border-radius: 50%;
+        width: 45px;
+        height: 45px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
     }
-    .mic-container { position: fixed; bottom: 32px; left: 65px; z-index: 1005 !important; }
-    div[data-testid="stFileUploader"] { 
-        position: fixed; bottom: 32px; left: 15px; 
-        width: 42px; height: 42px; opacity: 0; 
-        z-index: 1002; cursor: pointer; 
-    }
+
     .menu-card { background-color: #121212; padding: 25px; border-radius: 15px; border: 1px solid #FF4B4B; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
@@ -53,66 +57,56 @@ st.markdown("""
 if "messages" not in st.session_state: st.session_state.messages = []
 if "last_audio" not in st.session_state: st.session_state.last_audio = None
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
-if "img_data" not in st.session_state: st.session_state.img_data = None
 if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
 
 st.title("🚀 Pro AI")
 
-# --- MENU BUTTON & CONTENT (English) ---
+# --- MENU SECTION ---
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
     st.subheader("📖 About Pro AI")
-    st.write("Pro AI is a multi-modal assistant using Llama 3.2 Vision and Whisper to handle text, voice, and visual data.")
+    st.write("Pro AI is a professional voice-enabled assistant powered by Whisper and Llama 3.3 technology.")
     st.subheader("🔒 Privacy Policy")
-    st.write("We do not store your data. Conversations are encrypted in transit and deleted after each session.")
+    st.write("We value your privacy. Your voice data and conversations are processed in real-time and never stored on our servers.")
     st.subheader("⚖️ Terms & Conditions")
-    st.write("Use responsibly. AI accuracy is high but not absolute.")
+    st.write("This service is for ethical use. AI-generated responses should be cross-verified for critical tasks.")
     st.divider()
     st.subheader("📬 Feedback")
-    fb = st.text_area("How can we improve?")
+    fb = st.text_area("Your feedback helps us grow:")
     if st.button("Submit"):
         try:
             r = requests.post(f"https://api.github.com/repos/{st.secrets['GITHUB_REPO']}/issues", 
-                              json={"title": "Feedback", "body": fb}, 
+                              json={"title": "Voice App Feedback", "body": fb}, 
                               headers={"Authorization": f"token {st.secrets['GITHUB_TOKEN']}"})
-            if r.status_code == 201: st.success("Sent!")
-        except: st.error("Feedback error.")
+            if r.status_code == 201: st.success("Feedback recorded!")
+        except: st.error("Link Error.")
     if st.button("🗑️ Clear Chat"):
-        st.session_state.messages, st.session_state.img_data = [], None
+        st.session_state.messages = []
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# --- PHOTO ---
-st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
-photo = st.file_uploader("", type=["jpg", "png", "jpeg"], key="cam", label_visibility="collapsed")
-if photo: st.session_state.img_data = photo.getvalue()
-if st.session_state.img_data:
-    st.image(st.session_state.img_data, width=250)
-    if st.button("❌ Remove"):
-        st.session_state.img_data = None
-        st.rerun()
-
-# --- CHAT ---
+# --- CHAT DISPLAY ---
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# --- MIC ---
+# --- MIC REPLACED IMAGE ICON ---
 st.markdown('<div class="mic-container">', unsafe_allow_html=True)
 audio = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='recorder')
 st.markdown('</div>', unsafe_allow_html=True)
 
-user_query = st.chat_input("Ask me anything...")
+user_query = st.chat_input("Yahan puchiye...")
 
+# Process Voice
 if audio and st.session_state.last_audio_id != audio['id']:
     st.session_state.last_audio_id = audio['id']
     with st.spinner("Processing voice..."):
         try:
             trans = client.audio.transcriptions.create(file=("audio.wav", audio['bytes']), model="whisper-large-v3", response_format="text")
             user_query = trans
-        except: st.error("Mic failed.")
+        except: st.error("Mic error.")
 
 if user_query:
     IST = pytz.timezone('Asia/Kolkata')
@@ -123,22 +117,9 @@ if user_query:
     with st.chat_message("user"): st.markdown(user_query)
 
     try:
-        # --- MODEL LOGIC: FIXING ERROR 400 ---
-        if st.session_state.img_data:
-            # Vision model ke liye content 'list' format mein hona chahiye
-            b64 = base64.b64encode(st.session_state.img_data).decode('utf-8')
-            messages = [{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": f"{ts} User: {user_query}"},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
-                ]
-            }]
-            model = "llama-3.2-11b-vision-preview"
-        else:
-            # Text model ke liye content 'string' hona chahiye
-            messages = [{"role": "user", "content": f"{ts} User: {user_query}"}]
-            model = "llama-3.3-70b-versatile"
+        # Standard Text Model (Llama 3.3)
+        messages = [{"role": "user", "content": f"{ts} User: {user_query}. Respond in Hindi-English mix."}]
+        model = "llama-3.3-70b-versatile"
 
         with st.chat_message("assistant"):
             full_res, res_box = "", st.empty()
@@ -155,9 +136,8 @@ if user_query:
             with open("voice.mp3", "rb") as f: st.session_state.last_audio = f.read()
             st.rerun()
     except Exception as e:
-        st.error(f"Groq API Error: {e}")
+        st.error(f"Error: {e}")
 
 if st.session_state.last_audio:
     if st.button("🔈 Hear Response"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
-        
