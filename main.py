@@ -12,19 +12,23 @@ try:
 except:
     st.error("❌ GROQ API key missing")
 
-# Google Cloud credentials
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google_key.json"
+# Google Cloud credentials (Ensure this file is in your repo)
+if os.path.exists("google_key.json"):
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google_key.json"
+else:
+    st.warning("⚠️ google_key.json missing! Voice synthesis might fail.")
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS =================
+# ================= CSS (Fixed Layout) =================
 st.markdown("""
 <style>
 header, footer, .stDeployButton {visibility: hidden;}
 [data-testid="stSidebar"] {display: none;}
 .block-container {padding-bottom: 150px; padding-top: 2rem;}
-div[data-testid="stChatInput"] { margin-left: 55px !important; }
+div[data-testid="stChatInput"] { margin-left: 60px !important; }
 
+/* Mic Button Fixed at Left Corner */
 .mic-fixed-container {
     position: fixed;
     bottom: 32px;
@@ -32,22 +36,16 @@ div[data-testid="stChatInput"] { margin-left: 55px !important; }
     z-index: 9999;
 }
 .mic-fixed-container button {
-    border-radius: 50%;
-    width: 45px;
-    height: 45px;
-    background-color: #FF4B4B;
-    border: 2px solid white;
-}
-.menu-card {
-    background-color: #121212;
-    padding: 25px;
-    border-radius: 15px;
-    border: 1px solid #FF4B4B;
+    border-radius: 50% !important;
+    width: 48px !important;
+    height: 48px !important;
+    background-color: #FF4B4B !important;
+    border: 2px solid white !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= SESSION =================
+# ================= SESSION STATE =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_audio" not in st.session_state:
@@ -57,14 +55,14 @@ if "last_audio_id" not in st.session_state:
 if "voice_type" not in st.session_state:
     st.session_state.voice_type = "Male"
 
-# ================= TITLE =================
 st.title("🚀 Pro AI (Gemini Voice)")
 
-# ================= VOICE SELECT =================
+# Voice Select (Top bar)
 st.session_state.voice_type = st.radio(
-    "🗣️ Voice Select Karein",
+    "🗣️ Voice Select:",
     ["Male", "Female"],
-    horizontal=True
+    horizontal=True,
+    index=0 if st.session_state.voice_type == "Male" else 1
 )
 
 # ================= CHAT HISTORY =================
@@ -72,102 +70,97 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# ================= MIC =================
+# ================= PERMANENT MIC & INPUT =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key="mic")
+audio = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key="permanent_mic")
 st.markdown('</div>', unsafe_allow_html=True)
 
-user_query = st.chat_input("Yahan puchiye...")
+# Important: user_query ko reset hone se bachane ke liye handle karna
+query_text = st.chat_input("Yahan puchiye...")
 
-# ================= VOICE TO TEXT =================
+# Voice to Text Logic
 if audio and st.session_state.last_audio_id != audio["id"]:
     st.session_state.last_audio_id = audio["id"]
     try:
-        trans = client.audio.transcriptions.create(
-            file=("audio.wav", audio["bytes"]),
-            model="whisper-large-v3",
-            response_format="text"
-        )
-        user_query = trans
-    except:
-        st.error("❌ Voice recognition failed")
+        with st.spinner("Sun raha hoon..."):
+            trans = client.audio.transcriptions.create(
+                file=("audio.wav", audio["bytes"]),
+                model="whisper-large-v3",
+                response_format="text"
+            )
+            query_text = trans
+    except Exception as e:
+        st.error(f"❌ Voice recognition failed: {e}")
 
 # ================= GEMINI VOICE FUNCTION =================
 def gemini_voice(text, gender):
-    tts_client = texttospeech.TextToSpeechClient()
-    synthesis_input = texttospeech.SynthesisInput(text=text)
+    try:
+        tts_client = texttospeech.TextToSpeechClient()
+        synthesis_input = texttospeech.SynthesisInput(text=text)
 
-    if gender == "Male":
+        # Hindi (India) Voices
+        voice_name = "hi-IN-Wavenet-B" if gender == "Male" else "hi-IN-Wavenet-A"
+        
         voice = texttospeech.VoiceSelectionParams(
             language_code="hi-IN",
-            name="hi-IN-Wavenet-B"
-        )
-    else:
-        voice = texttospeech.VoiceSelectionParams(
-            language_code="hi-IN",
-            name="hi-IN-Wavenet-A"
+            name=voice_name
         )
 
-    audio_config = texttospeech.AudioConfig(
-        audio_encoding=texttospeech.AudioEncoding.MP3
-    )
+        audio_config = texttospeech.AudioConfig(
+            audio_encoding=texttospeech.AudioEncoding.MP3,
+            pitch=0.0,
+            speaking_rate=1.0
+        )
 
-    response = tts_client.synthesize_speech(
-        input=synthesis_input,
-        voice=voice,
-        audio_config=audio_config
-    )
-
-    with open("voice.mp3", "wb") as out:
-        out.write(response.audio_content)
+        response = tts_client.synthesize_speech(
+            input=synthesis_input,
+            voice=voice,
+            audio_config=audio_config
+        )
+        return response.audio_content
+    except Exception as e:
+        st.error(f"TTS Error: {e}")
+        return None
 
 # ================= CHAT PROCESS =================
-if user_query:
+if query_text:
     IST = pytz.timezone("Asia/Kolkata")
     now = datetime.datetime.now(IST)
 
-    st.session_state.messages.append(
-        {"role": "user", "content": user_query}
-    )
-
+    st.session_state.messages.append({"role": "user", "content": query_text})
     with st.chat_message("user"):
-        st.markdown(user_query)
+        st.markdown(query_text)
 
-    messages = [{
-        "role": "user",
-        "content": f"Time {now}. User: {user_query}. Reply in Hindi-English mix."
-    }]
+    try:
+        with st.chat_message("assistant"):
+            full_response = ""
+            box = st.empty()
 
-    with st.chat_message("assistant"):
-        full_response = ""
-        box = st.empty()
+            stream = client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[{"role": "user", "content": f"User: {query_text}. Reply in Hindi-English mix."}],
+                stream=True
+            )
 
-        stream = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=messages,
-            stream=True
-        )
+            for chunk in stream:
+                if chunk.choices[0].delta.content:
+                    full_response += chunk.choices[0].delta.content
+                    box.markdown(full_res := full_response + "▌")
 
-        for chunk in stream:
-            if chunk.choices[0].delta.content:
-                full_response += chunk.choices[0].delta.content
-                box.markdown(full_response + "▌")
+            box.markdown(full_response)
+            st.session_state.messages.append({"role": "assistant", "content": full_response})
 
-        box.markdown(full_response)
-
-        st.session_state.messages.append(
-            {"role": "assistant", "content": full_response}
-        )
-
-        # ---- GEMINI REAL VOICE ----
-        gemini_voice(full_response, st.session_state.voice_type)
-
-        with open("voice.mp3", "rb") as f:
-            st.session_state.last_audio = f.read()
-
-        os.remove("voice.mp3")
-        st.rerun()
+            # Voice Generation
+            with st.spinner("Generating Voice..."):
+                audio_content = gemini_voice(full_response, st.session_state.voice_type)
+                if audio_content:
+                    st.session_state.last_audio = audio_content
+            
+            st.rerun()
+    except Exception as e:
+        st.error(f"API Error: {e}")
 
 # ================= AUDIO OUTPUT =================
 if st.session_state.last_audio:
     st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
+    
