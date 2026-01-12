@@ -3,3 +3,4 @@ groq
 gtts
 streamlit-mic-recorder
 pytz
+google_key.json
