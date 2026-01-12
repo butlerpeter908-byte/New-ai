@@ -1,35 +1,36 @@
 import streamlit as st
 from groq import Groq
-from gtts import gTTS
-import os
 import datetime
-import pytz 
+import pytz
+import os
 from streamlit_mic_recorder import mic_recorder
+from google.cloud import texttospeech
 
-# ---------------- API KEY ----------------
+# ================= API SETUP =================
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("API Key missing! Please check Streamlit secrets.")
+    st.error("❌ GROQ API key missing")
+
+# Google Cloud credentials
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "google_key.json"
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ---------------- CSS ----------------
+# ================= CSS =================
 st.markdown("""
 <style>
 header, footer, .stDeployButton {visibility: hidden;}
 [data-testid="stSidebar"] {display: none;}
 .block-container {padding-bottom: 150px; padding-top: 2rem;}
-
 div[data-testid="stChatInput"] { margin-left: 55px !important; }
 
-.mic-fixed-container { 
-    position: fixed; 
-    bottom: 32px; 
-    left: 15px; 
-    z-index: 9999; 
+.mic-fixed-container {
+    position: fixed;
+    bottom: 32px;
+    left: 15px;
+    z-index: 9999;
 }
-
 .mic-fixed-container button {
     border-radius: 50%;
     width: 45px;
@@ -37,7 +38,6 @@ div[data-testid="stChatInput"] { margin-left: 55px !important; }
     background-color: #FF4B4B;
     border: 2px solid white;
 }
-
 .menu-card {
     background-color: #121212;
     padding: 25px;
@@ -47,58 +47,39 @@ div[data-testid="stChatInput"] { margin-left: 55px !important; }
 </style>
 """, unsafe_allow_html=True)
 
-# ---------------- SESSION STATE ----------------
+# ================= SESSION =================
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "last_audio" not in st.session_state:
     st.session_state.last_audio = None
-if "show_menu" not in st.session_state:
-    st.session_state.show_menu = False
 if "last_audio_id" not in st.session_state:
     st.session_state.last_audio_id = None
 if "voice_type" not in st.session_state:
     st.session_state.voice_type = "Male"
 
-# ---------------- TITLE ----------------
-st.title("🚀 Pro AI")
+# ================= TITLE =================
+st.title("🚀 Pro AI (Gemini Voice)")
 
-# ---------------- VOICE SELECTOR ----------------
+# ================= VOICE SELECT =================
 st.session_state.voice_type = st.radio(
     "🗣️ Voice Select Karein",
     ["Male", "Female"],
     horizontal=True
 )
 
-# ---------------- MENU ----------------
-if st.button("☰ MENU"):
-    st.session_state.show_menu = not st.session_state.show_menu
+# ================= CHAT HISTORY =================
+for m in st.session_state.messages:
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
 
-if st.session_state.show_menu:
-    st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    st.subheader("📖 About Pro AI")
-    st.write("Voice based AI Assistant using LLaMA 3.3 + Whisper")
-    st.subheader("🔒 Privacy Policy")
-    st.write("We do not store user data.")
-    st.subheader("⚖️ Terms")
-    st.write("AI responses may not be 100% accurate.")
-    if st.button("🗑️ Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
-
-# ---------------- CHAT HISTORY ----------------
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-# ---------------- MIC BUTTON ----------------
+# ================= MIC =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
 audio = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key="mic")
 st.markdown('</div>', unsafe_allow_html=True)
 
 user_query = st.chat_input("Yahan puchiye...")
 
-# ---------------- VOICE INPUT ----------------
+# ================= VOICE TO TEXT =================
 if audio and st.session_state.last_audio_id != audio["id"]:
     st.session_state.last_audio_id = audio["id"]
     try:
@@ -109,13 +90,41 @@ if audio and st.session_state.last_audio_id != audio["id"]:
         )
         user_query = trans
     except:
-        st.error("Voice input failed")
+        st.error("❌ Voice recognition failed")
 
-# ---------------- CHAT PROCESS ----------------
+# ================= GEMINI VOICE FUNCTION =================
+def gemini_voice(text, gender):
+    tts_client = texttospeech.TextToSpeechClient()
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+
+    if gender == "Male":
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="hi-IN",
+            name="hi-IN-Wavenet-B"
+        )
+    else:
+        voice = texttospeech.VoiceSelectionParams(
+            language_code="hi-IN",
+            name="hi-IN-Wavenet-A"
+        )
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3
+    )
+
+    response = tts_client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice,
+        audio_config=audio_config
+    )
+
+    with open("voice.mp3", "wb") as out:
+        out.write(response.audio_content)
+
+# ================= CHAT PROCESS =================
 if user_query:
     IST = pytz.timezone("Asia/Kolkata")
     now = datetime.datetime.now(IST)
-    timestamp = now.strftime("%I:%M %p | %d-%m-%Y")
 
     st.session_state.messages.append(
         {"role": "user", "content": user_query}
@@ -126,11 +135,11 @@ if user_query:
 
     messages = [{
         "role": "user",
-        "content": f"Time: {timestamp}. User said: {user_query}. Reply in Hindi-English mix."
+        "content": f"Time {now}. User: {user_query}. Reply in Hindi-English mix."
     }]
 
     with st.chat_message("assistant"):
-        response_text = ""
+        full_response = ""
         box = st.empty()
 
         stream = client.chat.completions.create(
@@ -141,31 +150,17 @@ if user_query:
 
         for chunk in stream:
             if chunk.choices[0].delta.content:
-                response_text += chunk.choices[0].delta.content
-                box.markdown(response_text + "▌")
+                full_response += chunk.choices[0].delta.content
+                box.markdown(full_response + "▌")
 
-        box.markdown(response_text)
+        box.markdown(full_response)
+
         st.session_state.messages.append(
-            {"role": "assistant", "content": response_text}
+            {"role": "assistant", "content": full_response}
         )
 
-        # ---------------- MALE / FEMALE VOICE ----------------
-        if st.session_state.voice_type == "Male":
-            tts = gTTS(
-                text=response_text,
-                lang="hi",
-                tld="co.in",
-                slow=False
-            )
-        else:
-            tts = gTTS(
-                text=response_text,
-                lang="hi",
-                tld="com.au",
-                slow=False
-            )
-
-        tts.save("voice.mp3")
+        # ---- GEMINI REAL VOICE ----
+        gemini_voice(full_response, st.session_state.voice_type)
 
         with open("voice.mp3", "rb") as f:
             st.session_state.last_audio = f.read()
@@ -173,7 +168,6 @@ if user_query:
         os.remove("voice.mp3")
         st.rerun()
 
-# ---------------- AUDIO PLAY ----------------
+# ================= AUDIO OUTPUT =================
 if st.session_state.last_audio:
-    if st.button("🔈 Jawab Suniye"):
-        st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
+    st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
