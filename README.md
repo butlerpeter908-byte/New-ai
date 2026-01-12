@@ -1,1 +1,3 @@
-# New-ai
+streamlit
+groq
+gtts
