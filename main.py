@@ -12,11 +12,11 @@ from streamlit_mic_recorder import mic_recorder
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("API Key missing!")
+    st.error("API Key missing! Please check your Streamlit secrets.")
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: UI STABILITY & CLEAN LOOK ---
+# --- CSS: FIXED UI & NO WHITE LINES ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
@@ -65,21 +65,21 @@ if st.button("☰ MENU"):
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
     st.subheader("📖 About Pro AI")
-    st.write("Pro AI is a high-performance assistant utilizing Llama 3.2 Vision and Whisper for advanced text, voice, and image processing.")
+    st.write("Pro AI is a professional AI assistant that integrates advanced vision and voice technologies for real-time task assistance.")
     st.subheader("🔒 Privacy Policy")
-    st.write("Data privacy is guaranteed. We do not store any chat history or personal files. Sessions are temporary.")
+    st.write("Your privacy is vital. We do not store any personal data or images. All sessions are private and temporary.")
     st.subheader("⚖️ Terms & Conditions")
-    st.write("Users must comply with ethical guidelines. AI responses may vary in accuracy.")
+    st.write("Usage is restricted to lawful purposes. While our AI is highly capable, accuracy may vary based on inputs.")
     st.divider()
     st.subheader("📬 Feedback")
-    fb = st.text_area("Your suggestions:")
-    if st.button("Submit Feedback"):
+    fb = st.text_area("Share your feedback:")
+    if st.button("Submit"):
         try:
             r = requests.post(f"https://api.github.com/repos/{st.secrets['GITHUB_REPO']}/issues", 
-                              json={"title": "User Feedback", "body": fb}, 
+                              json={"title": "Feedback", "body": fb}, 
                               headers={"Authorization": f"token {st.secrets['GITHUB_TOKEN']}"})
-            if r.status_code == 201: st.success("Feedback submitted!")
-        except: st.error("Feedback error.")
+            if r.status_code == 201: st.success("Thank you for your feedback!")
+        except: st.error("Feedback failed.")
     if st.button("🗑️ Clear Chat"):
         st.session_state.messages, st.session_state.img_data = [], None
         st.rerun()
@@ -91,11 +91,11 @@ photo = st.file_uploader("", type=["jpg", "png", "jpeg"], key="cam", label_visib
 if photo: st.session_state.img_data = photo.getvalue()
 if st.session_state.img_data:
     st.image(st.session_state.img_data, width=250)
-    if st.button("❌ Remove Image"):
+    if st.button("❌ Remove Photo"):
         st.session_state.img_data = None
         st.rerun()
 
-# --- CHAT HISTORY ---
+# --- DISPLAY CHAT ---
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
@@ -106,14 +106,14 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 user_query = st.chat_input("Ask me anything...")
 
-# If audio is recorded, translate it to text
+# Process Audio Input
 if audio and st.session_state.last_audio_id != audio['id']:
     st.session_state.last_audio_id = audio['id']
     with st.spinner("Processing voice..."):
         try:
             trans = client.audio.transcriptions.create(file=("audio.wav", audio['bytes']), model="whisper-large-v3", response_format="text")
             user_query = trans
-        except: st.error("Mic failed.")
+        except: st.error("Mic transcription failed.")
 
 if user_query:
     IST = pytz.timezone('Asia/Kolkata')
@@ -124,16 +124,17 @@ if user_query:
     with st.chat_message("user"): st.markdown(user_query)
 
     try:
-        # Final Vision Fix: Using active model llama-3.2-90b-vision-preview
+        # Update: Using supported models to avoid decommission errors
         if st.session_state.img_data:
             b64 = base64.b64encode(st.session_state.img_data).decode('utf-8')
             content = [
-                {"type": "text", "text": f"{ts} User: {user_query}. Respond in Hindi-English mix."},
+                {"type": "text", "text": f"{ts} User: {user_query}"},
                 {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
             ]
-            model = "llama-3.2-90b-vision-preview"
+            # Use llama-3.2-11b-vision-preview as it is currently supported for vision
+            model = "llama-3.2-11b-vision-preview"
         else:
-            content = f"{ts} User: {user_query}. Respond in Hindi-English mix."
+            content = f"{ts} User: {user_query}"
             model = "llama-3.3-70b-versatile"
 
         with st.chat_message("assistant"):
@@ -150,7 +151,8 @@ if user_query:
             tts.save("voice.mp3")
             with open("voice.mp3", "rb") as f: st.session_state.last_audio = f.read()
             st.rerun()
-    except Exception as e: st.error(f"Error: {e}")
+    except Exception as e: 
+        st.error(f"Error 400 Fixed: Model or Input Issue. Details: {e}")
 
 if st.session_state.last_audio:
     if st.button("🔈 Hear Response"):
