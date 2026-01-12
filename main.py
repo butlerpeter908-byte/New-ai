@@ -100,4 +100,21 @@ if prompt := st.chat_input("Yahan kuch puchiye..."):
             for chunk in comp:
                 if chunk.choices[0].delta.content:
                     full_res += chunk.choices[0].delta.content
-                    res_box.
+                    res_box.markdown(full_res + "▌")
+            res_box.markdown(full_res)
+            
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
+            
+            # Audio
+            tts = gTTS(text=full_res, lang='hi', tld=tld_choice)
+            tts.save("temp.mp3")
+            with open("temp.mp3", "rb") as f:
+                st.session_state.last_audio = f.read()
+
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+# Suniye Button
+if st.session_state.last_audio:
+    if st.button("🔈 Suniye"):
+        st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
