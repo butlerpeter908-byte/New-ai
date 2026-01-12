@@ -17,14 +17,13 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: UI STABILITY & WHITE LINE REMOVAL ---
+# --- CSS: UI STABILITY ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 150px; padding-top: 2rem;}
     
-    /* Remove white lines/empty containers */
     div[data-testid="stVerticalBlock"] > div:empty {display: none !important;}
     .stEmpty { margin: 0px !important; padding: 0px !important; display: none; }
     
@@ -57,68 +56,51 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Session State Initialization
 if "messages" not in st.session_state: st.session_state.messages = []
 if "last_audio" not in st.session_state: st.session_state.last_audio = None
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
 if "img_data" not in st.session_state: st.session_state.img_data = None
 if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
+if "mic_text" not in st.session_state: st.session_state.mic_text = None
 
 st.title("🚀 Pro AI")
 
-# --- MENU BUTTON ---
+# --- MENU SECTION ---
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
-# --- MENU CONTENT (ENGLISH) ---
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    
-    # 1. About Us
     st.subheader("📖 About Pro AI")
-    st.write("""
-    Pro AI is an advanced artificial intelligence assistant powered by cutting-edge Vision and Voice technology. 
-    By leveraging state-of-the-art models like Llama 3.2 Vision and Whisper, this platform provides intelligent 
-    responses to text, images, and voice commands. Our mission is to offer a seamless personal assistant 
-    capable of analyzing complex visuals and providing real-time information with high efficiency.
-    """)
-
-    # 2. Privacy Policy
+    st.write("Pro AI is an advanced AI assistant using Llama 3.2 Vision and Whisper for seamless text, image, and voice interaction.")
     st.subheader("🔒 Privacy Policy")
-    st.write("""
-    Your privacy is our utmost priority. Pro AI is designed to be a privacy-first platform; we do not store, 
-    save, or share any of your personal data, chat history, or uploaded images on our servers. 
-    All processing occurs within temporary sessions, and all data is immediately purged once the session ends 
-    or the chat is cleared. We do not use third-party tracking or sell user information to any external entities.
-    """)
-
-    # 3. Terms & Conditions
+    st.write("We prioritize your privacy. No data is stored; all interactions are temporary and deleted after the session.")
     st.subheader("⚖️ Terms & Conditions")
-    st.write("""
-    By using this application, you agree to use the platform solely for lawful and ethical purposes. 
-    Any attempt to upload harmful, abusive, or illegal content is strictly prohibited. 
-    Please note that while our AI is highly advanced, responses may not always be 100% accurate; 
-    users should verify critical information independently. Pro AI reserves the right to modify 
-    or terminate services at any time without prior notice.
-    """)
-
+    st.write("Use this platform for lawful purposes. AI responses may not be 100% accurate.")
     st.divider()
+    st.subheader("📬 GitHub Feedback")
+    feedback_msg = st.text_area("Your thoughts?")
+    if st.button("Submit Feedback"):
+        try:
+            token, repo = st.secrets["GITHUB_TOKEN"], st.secrets["GITHUB_REPO"]
+            res = requests.post(f"https://api.github.com/repos/{repo}/issues", 
+                                json={"title": "User Feedback", "body": feedback_msg}, 
+                                headers={"Authorization": f"token {token}"})
+            if res.status_code == 201: st.success("Sent!")
+        except: st.error("Error sending feedback.")
     if st.button("🗑️ Clear All Chat"):
-        st.session_state.messages = []
-        st.session_state.last_audio = None
-        st.session_state.img_data = None
+        st.session_state.messages, st.session_state.img_data = [], None
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- PHOTO HANDLING ---
 st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
 new_photo = st.file_uploader("", type=["jpg", "png", "jpeg"], key="camera_uploader", label_visibility="collapsed")
-
-if new_photo:
-    st.session_state.img_data = new_photo.getvalue()
-
+if new_photo: st.session_state.img_data = new_photo.getvalue()
 if st.session_state.img_data:
-    st.image(st.session_state.img_data, caption="Captured Image", width=250)
-    if st.button("❌ Remove Image"):
+    st.image(st.session_state.img_data, width=250)
+    if st.button("❌ Remove Photo"):
         st.session_state.img_data = None
         st.rerun()
 
@@ -126,23 +108,29 @@ if st.session_state.img_data:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# --- MIC ---
+# --- MIC LOGIC (FIXED) ---
 st.markdown('<div class="mic-container">', unsafe_allow_html=True)
 audio_data = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='recorder')
 st.markdown('</div>', unsafe_allow_html=True)
 
-voice_prompt = None
 if audio_data and st.session_state.last_audio_id != audio_data['id']:
     st.session_state.last_audio_id = audio_data['id']
-    with st.spinner("Listening..."):
-        try:
-            with open("temp.wav", "wb") as f: f.write(audio_data['bytes'])
-            with open("temp.wav", "rb") as f:
-                transcription = client.audio.transcriptions.create(file=("temp.wav", f.read()), model="whisper-large-v3", response_format="text")
-            voice_prompt = transcription
-        except: st.error("Mic issue.")
+    try:
+        with st.spinner("Processing Voice..."):
+            transcription = client.audio.transcriptions.create(
+                file=("temp.wav", audio_data['bytes']), 
+                model="whisper-large-v3", 
+                response_format="text"
+            )
+            if transcription:
+                st.session_state.mic_text = transcription
+                st.rerun()
+    except Exception as e:
+        st.error(f"Mic Error: {e}")
 
-user_input = voice_prompt if voice_prompt else st.chat_input("Ask me anything...")
+# Process Input
+user_input = st.session_state.mic_text if st.session_state.mic_text else st.chat_input("Ask me anything...")
+st.session_state.mic_text = None # Clear after use
 
 if user_input:
     IST = pytz.timezone('Asia/Kolkata')
@@ -153,25 +141,20 @@ if user_input:
     with st.chat_message("user"): st.markdown(user_input)
 
     try:
-        # Vision-Ready content format
-        content_list = [{"type": "text", "text": f"System Time: {cur_time}, Date: {cur_date}. User Question: {user_input}"}]
-        
         if st.session_state.img_data:
-            base64_image = base64.b64encode(st.session_state.img_data).decode('utf-8')
-            content_list.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}
-            })
+            img_b64 = base64.b64encode(st.session_state.img_data).decode('utf-8')
+            content = [
+                {"type": "text", "text": f"User: {user_input} (Time: {cur_time}, Date: {cur_date})"},
+                {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_b64}"}}
+            ]
+            model = "llama-3.2-11b-vision-preview"
+        else:
+            content = f"Time: {cur_time}, Date: {cur_date}. Question: {user_input}"
+            model = "llama-3.3-70b-versatile"
 
         with st.chat_message("assistant"):
-            full_res = ""
-            res_box = st.empty()
-            # Fixed Vision Model
-            comp = client.chat.completions.create(
-                model="llama-3.2-11b-vision-preview",
-                messages=[{"role": "user", "content": content_list}],
-                stream=True
-            )
+            full_res, res_box = "", st.empty()
+            comp = client.chat.completions.create(model=model, messages=[{"role": "user", "content": content}], stream=True)
             for chunk in comp:
                 if chunk.choices[0].delta.content:
                     full_res += chunk.choices[0].delta.content
