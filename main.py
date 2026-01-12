@@ -3,6 +3,7 @@ from groq import Groq
 import base64
 from gtts import gTTS
 import requests
+from datetime import datetime # Live Time/Date ke liye
 
 # API Key check
 try:
@@ -12,7 +13,7 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: EVERYTHING FIXED ---
+# --- CSS: FIXED LOOK ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
@@ -58,45 +59,27 @@ if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
 st.title("🚀 Pro AI")
 
-# --- MENU BUTTON ---
+# --- MENU SECTION ---
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
-# --- MENU CONTENT (ABOUT, PRIVACY, TERMS, FEEDBACK) ---
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
+    st.markdown("### 📖 About, Privacy & Terms")
+    st.write("Pro AI text aur photos samajhta hai. Hum aapka data save nahi karte. Ise sirf legal kaam ke liye use karein.")
     
-    # 1. About Section
-    st.markdown("### 📖 About Pro AI")
-    st.write("Pro AI ek advanced vision assistant hai jo Llama 3.3 model ka use karta hai. Ye text aur photos dono ko samajh kar voice mein jawab deta hai.")
-
-    # 2. Privacy & Terms
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("#### 🔒 Privacy Policy")
-        st.write("Hum aapka data save nahi karte. Chats sirf temporary session ke liye hain.")
-    with col2:
-        st.markdown("#### ⚖️ Terms & Conditions")
-        st.write("Sirf legal use karein. AI accuracy ki koi guarantee nahi hai.")
-
     st.divider()
-
-    # 3. GitHub Feedback Section
-    st.markdown("### 📬 Feedback (Send to Owner)")
-    feedback_msg = st.text_area("Hume batayein aapko app kaisa laga:", placeholder="Aapka feedback...")
+    st.markdown("### 📬 Feedback (GitHub)")
+    feedback_msg = st.text_area("Hume batayein aapko app kaisa laga:")
     if st.button("Submit Feedback"):
         if feedback_msg:
             try:
-                token = st.secrets["GITHUB_TOKEN"]
-                repo = st.secrets["GITHUB_REPO"]
+                token, repo = st.secrets["GITHUB_TOKEN"], st.secrets["GITHUB_REPO"]
                 url = f"https://api.github.com/repos/{repo}/issues"
-                headers = {"Authorization": f"token {token}", "Accept": "application/vnd.github.v3+json"}
-                res = requests.post(url, json={"title": "User Feedback", "body": feedback_msg}, headers=headers)
-                if res.status_code == 201: st.success("✅ GitHub par feedback bhej diya gaya!")
-                else: st.error("❌ Token ya Repo check karein.")
-            except: st.error("Secrets setup karein!")
-    
-    st.divider()
+                res = requests.post(url, json={"title": "Feedback", "body": feedback_msg}, headers={"Authorization": f"token {token}"})
+                if res.status_code == 201: st.success("Bhej diya gaya!")
+            except: st.error("GitHub Secrets check karein.")
+
     if st.button("🗑️ Clear All Chat"):
         st.session_state.messages = []
         st.session_state.last_audio = None
@@ -112,11 +95,20 @@ st.markdown('<div class="plus-icon-container">+</div>', unsafe_allow_html=True)
 uploaded_file = st.file_uploader("", type=["jpg", "png", "jpeg"], label_visibility="collapsed")
 
 if prompt := st.chat_input("Yahan puchiye..."):
+    # CURRENT TIME & DATE NIKALNA
+    now = datetime.now()
+    current_time = now.strftime("%H:%M:%S")
+    current_date = now.strftime("%d %B %Y")
+    day_name = now.strftime("%A")
+
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"): st.markdown(prompt)
 
     try:
-        content = [{"type": "text", "text": f"System: Use full words. User: {prompt}"}]
+        # System prompt mein Time aur Date add karna
+        sys_info = f"System Info: Today is {day_name}, {current_date}. Current time is {current_time}."
+        content = [{"type": "text", "text": f"{sys_info}\nProfessional AI. Use full words. User: {prompt}"}]
+        
         if uploaded_file:
             img = base64.b64encode(uploaded_file.read()).decode('utf-8')
             content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img}"}})
@@ -140,5 +132,5 @@ if prompt := st.chat_input("Yahan puchiye..."):
     except Exception as e: st.error(f"Error: {e}")
 
 if st.session_state.last_audio:
-    if st.button("🔈 listen"):
+    if st.button("🔈 Suniye"):
         st.audio(st.session_state.last_audio, format="audio/mp3", autoplay=True)
