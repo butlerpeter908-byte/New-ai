@@ -16,13 +16,17 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: PERSISTENT UI (NO WHITE LINE) =================
+# ================= CSS: HIDING MANAGE APP & UI FIXES =================
 st.markdown("""
     <style>
-    header, footer, .stDeployButton {visibility: hidden;}
+    /* Hiding Streamlit Branding and Manage App button for others */
+    header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
+    #MainMenu {visibility: hidden;}
+    
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     
+    /* Removing White Line */
     hr {border: none !important; display: none !important;}
     div.stChatFloatingInputContainer {border: none !important; box-shadow: none !important;}
     
@@ -32,6 +36,7 @@ st.markdown("""
         border: none !important; 
     }
 
+    /* Fixed Mic Position */
     .mic-fixed-container { 
         position: fixed; 
         bottom: 10px; 
@@ -94,7 +99,7 @@ if st.session_state.show_menu:
 
 # ================= MIC DISPLAY =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v16')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v17')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
@@ -102,7 +107,7 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC (RESTORED TO ORIGINAL) =================
+# ================= VOICE LOGIC =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
