@@ -16,16 +16,16 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: REMOVING WHITE LINE & FIXING MIC =================
+# ================= CSS: PERSISTENT UI (NO WHITE LINE) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     
-    /* Strict removal of any border/line that causes the white line */
     hr {border: none !important; display: none !important;}
     div.stChatFloatingInputContainer {border: none !important; box-shadow: none !important;}
+    
     div[data-testid="stChatInput"] { 
         margin-left: 65px !important; 
         z-index: 1000; 
@@ -66,7 +66,7 @@ if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
 st.title("🚀 Pro AI")
 
-# ================= MENU SECTION (NO CHANGES) =================
+# ================= MENU SECTION (UNCHANGED) =================
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
@@ -94,7 +94,7 @@ if st.session_state.show_menu:
 
 # ================= MIC DISPLAY =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v15')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v16')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
@@ -102,23 +102,22 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC =================
+# ================= VOICE LOGIC (RESTORED TO ORIGINAL) =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
         try:
-            transcription = client.audio.transcriptions.create(
-                file=("voice.wav", audio_data['bytes']),
-                model="whisper-large-v3",
-                response_format="text",
-                temperature=0.0
-            )
-            clean_txt = transcription.strip().lower()
-            if clean_txt and len(clean_txt) > 2 and clean_txt not in ["okay", "thank you"]:
-                u_input = transcription
+            with st.spinner("🎙️ Listening..."):
+                transcription = client.audio.transcriptions.create(
+                    file=("voice.wav", audio_data['bytes']),
+                    model="whisper-large-v3",
+                    response_format="text"
+                )
+                if transcription and len(transcription.strip()) > 1:
+                    u_input = transcription
         except: u_input = None
 
-# ================= TIME, DATE & WEATHER LOGIC (STRICT) =================
+# ================= TIME, DATE & WEATHER LOGIC =================
 if u_input:
     IST = pytz.timezone('Asia/Kolkata')
     now = datetime.datetime.now(IST)
