@@ -16,23 +16,23 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: MIC SHIFTED TO BOTTOM-MOST =================
+# ================= CSS: FINAL ALIGNMENT & MIC POSITION =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 150px; padding-top: 2rem;}
     
-    /* Input Box space for Mic */
+    /* Chat Input Space */
     div[data-testid="stChatInput"] { 
         margin-left: 60px !important; 
         z-index: 1000;
     }
 
-    /* Mic Icon: Shifted further DOWN (10px from bottom) */
+    /* Mic Icon: Shifted to the absolute bottom (8px) */
     .mic-fixed-container { 
         position: fixed; 
-        bottom: 10px; /* Pehle 35px tha, ab aur niche kar diya */
+        bottom: 8px; 
         left: 15px; 
         z-index: 9999 !important; 
     }
@@ -40,11 +40,10 @@ st.markdown("""
     .mic-fixed-container button {
         background-color: #FF4B4B !important;
         border-radius: 50% !important;
-        width: 48px !important;
-        height: 48px !important;
+        width: 50px !important;
+        height: 50px !important;
         border: 2px solid white !important;
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.4) !important;
-        font-size: 20px !important;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.4) !important;
     }
 
     .menu-card { 
@@ -69,18 +68,46 @@ if "show_menu" not in st.session_state:
 
 st.title("🚀 Pro AI")
 
-# ================= MENU SECTION (ENGLISH) =================
+# ================= MENU SECTION (FULL ENGLISH) =================
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
+    
+    # 1. ABOUT
     st.subheader("📖 About Pro AI")
-    st.info("**Pro AI** is a professional assistant using Whisper (Voice) and Llama 3.3 (Brain) technology.")
+    st.info("Pro AI is a professional assistant powered by Whisper (Voice) and Llama 3.3 (Brain) technology.")
+    
+    # 2. PRIVACY
     st.subheader("🔒 Privacy Policy")
-    st.write("No data storage. Conversations are session-based and private.")
+    st.write("Your privacy is our priority. No data is stored; interactions are session-based.")
+    
+    # 3. TERMS
     st.subheader("⚖️ Terms & Conditions")
-    st.write("Use ethically. Verify critical AI-generated information.")
+    st.write("Use this AI for ethical purposes. Verify critical information independently.")
+    
+    st.divider()
+
+    # 4. FEEDBACK (RE-ADDED)
+    st.subheader("📬 Send Feedback")
+    user_feedback = st.text_area("Share your thoughts with us:")
+    if st.button("Submit Feedback"):
+        if user_feedback:
+            # Check for GitHub secrets, otherwise save locally
+            if "GITHUB_TOKEN" in st.secrets and "GITHUB_REPO" in st.secrets:
+                try:
+                    url = f"https://api.github.com/repos/{st.secrets['GITHUB_REPO']}/issues"
+                    headers = {"Authorization": f"token {st.secrets['GITHUB_TOKEN']}"}
+                    requests.post(url, json={"title": "New Feedback", "body": user_feedback}, headers=headers)
+                    st.success("✅ Feedback sent to GitHub!")
+                except:
+                    st.error("Connection Error.")
+            else:
+                st.success("✅ Feedback received! Thank you.")
+        else:
+            st.warning("Please enter feedback before submitting.")
+    
     st.divider()
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
@@ -93,20 +120,20 @@ for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# ================= MIC WITH VOICE WAVE ICON & BOTTOM SHIFT =================
+# ================= VOICE MIC ICON & POSITION =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-# start_prompt mein mic aur sound wave ka feel diya hai
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='pro_mic_voice_wave')
+# Professional Voice Mic Icon (🎙️) and Wave (🌊)
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='pro_mic_v_final_final')
 st.markdown('</div>', unsafe_allow_html=True)
 
 u_query = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC =================
+# ================= VOICE LOGIC (BUG FIXED) =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
         try:
-            with st.spinner("🎙️ Sun raha hoon..."):
+            with st.spinner("🎙️ Listening..."):
                 trans = client.audio.transcriptions.create(
                     file=("voice.wav", audio_data['bytes']),
                     model="whisper-large-v3",
@@ -117,7 +144,7 @@ if audio_data:
         except:
             u_query = None
 
-# ================= RESPONSE LOGIC =================
+# ================= RESPONSE LOGIC (STRICT TIME CONTROL) =================
 if u_query:
     IST = pytz.timezone('Asia/Kolkata')
     now = datetime.datetime.now(IST)
@@ -133,10 +160,10 @@ if u_query:
             full_res = ""
             box = st.empty()
             
-            # System instruction: No time/date unless asked
+            # System Instruction: Strictly NO TIME unless asked
             sys_msg = (
-                f"You are Pro AI. Internal Info: {current_date}, {current_time}. "
-                "Respond in English. IMPORTANT: NEVER mention date or time unless the user specifically asks."
+                f"You are Pro AI. Context: {current_date}, {current_time}. "
+                "Respond in English. DO NOT mention date or time unless specifically asked by the user."
             )
 
             completion = client.chat.completions.create(
@@ -153,7 +180,7 @@ if u_query:
             box.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
 
-            # TTS
+            # TTS Generation
             tts = gTTS(text=full_res, lang='en', tld='com.au')
             tts.save("ans.mp3")
             with open("ans.mp3", "rb") as f:
@@ -166,4 +193,3 @@ if u_query:
 if st.session_state.last_audio_content:
     if st.button("🔈 Hear Response"):
         st.audio(st.session_state.last_audio_content, format="audio/mp3", autoplay=True)
-        
