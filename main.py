@@ -16,7 +16,7 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: STABLE MIC & UI =================
+# ================= CSS: STABLE UI =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
@@ -28,10 +28,9 @@ st.markdown("""
         z-index: 1000;
     }
 
-    /* Fixed Mic Position - Ultra Bottom */
     .mic-fixed-container { 
         position: fixed; 
-        bottom: 8px; 
+        bottom: 10px; 
         left: 15px; 
         z-index: 9999 !important; 
     }
@@ -67,23 +66,35 @@ if "show_menu" not in st.session_state:
 
 st.title("🚀 Pro AI")
 
-# ================= MENU SECTION =================
+# ================= MENU SECTION (PROTECTED) =================
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
+    
     st.subheader("📖 About Pro AI")
     st.info("Pro AI is a professional multimodal assistant using Whisper V3 and Llama 3.3.")
+    
     st.subheader("🔒 Privacy Policy")
     st.write("Your conversations are private. We do not store any voice or text data.")
+    
     st.subheader("⚖️ Terms & Conditions")
     st.write("Use ethically. Verify critical information independently.")
+    
     st.divider()
+
+    # --- FEEDBACK WITH POP-UP ---
     st.subheader("📬 Send Feedback")
-    f_text = st.text_area("Your feedback:")
-    if st.button("Submit"):
-        if f_text: st.success("✅ Feedback received!")
+    f_text = st.text_area("Your feedback:", key="feedback_box")
+    if st.button("Submit Feedback"):
+        if f_text:
+            # Clear input logic and show Pop-up
+            st.toast("Thank you for your feedback!", icon="🎉")
+            st.success("Thank you for your feedback!")
+        else:
+            st.warning("Please enter something before submitting.")
+    
     st.divider()
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
@@ -91,9 +102,9 @@ if st.session_state.show_menu:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= MIC ALWAYS ON SCREEN =================
+# ================= MIC ALWAYS ON =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='stable_mic_v11')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_stable_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= CHAT DISPLAY =================
@@ -103,31 +114,24 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE PROCESSING (NO HELLO/NOISE BUG) =================
+# ================= VOICE LOGIC (FIXED) =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
         try:
-            with st.spinner("🎙️ Transcribing..."):
-                # Using Whisper-Large-V3 for better accuracy
+            with st.spinner("🎙️ Listening..."):
                 transcription = client.audio.transcriptions.create(
                     file=("voice.wav", audio_data['bytes']),
                     model="whisper-large-v3",
-                    response_format="text",
-                    prompt="The user is speaking about time, weather, or general questions. Ignore background noise and silence."
+                    response_format="text"
                 )
                 
-                # Logic: Ignore noise like "Thank you." or "Hello." if it's very short
-                clean_text = transcription.strip().replace(".", "")
-                if clean_text and len(clean_text) > 2:
+                if transcription and len(transcription.strip()) > 1:
                     u_input = transcription
-                else:
-                    u_input = None
         except Exception as e:
             st.error(f"Voice Error: {e}")
-            u_input = None
 
-# ================= AI RESPONSE ENGINE =================
+# ================= AI RESPONSE =================
 if u_input:
     IST = pytz.timezone('Asia/Kolkata')
     now = datetime.datetime.now(IST)
@@ -142,10 +146,7 @@ if u_input:
         with st.chat_message("assistant"):
             full_res = ""
             box = st.empty()
-            sys_msg = (
-                f"You are Pro AI. Context: Today is {curr_date}, Time is {curr_time}. "
-                "Respond in English. IMPORTANT: Only mention time/date if specifically asked."
-            )
+            sys_msg = f"You are Pro AI. Context: {curr_date}, {curr_time}. Respond in English. Only mention time/date if asked."
 
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
@@ -161,7 +162,6 @@ if u_input:
             box.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
 
-            # English TTS
             tts = gTTS(text=full_res, lang='en', tld='com.au')
             tts.save("ans.mp3")
             with open("ans.mp3", "rb") as f:
@@ -174,3 +174,4 @@ if u_input:
 if st.session_state.last_audio_content:
     if st.button("🔈 Hear Response"):
         st.audio(st.session_state.last_audio_content, format="audio/mp3", autoplay=True)
+        
