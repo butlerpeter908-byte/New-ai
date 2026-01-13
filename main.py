@@ -16,37 +16,35 @@ except:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# --- CSS: REMOVED IMAGE ICON & CENTERED MIC ---
+# --- CSS: MIC POSITIONED EXACTLY NEXT TO CHAT INPUT ---
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
-    .block-container {padding-bottom: 150px; padding-top: 2rem;}
+    .block-container {padding-bottom: 120px; padding-top: 2rem;}
     div[data-testid="stVerticalBlock"] > div:empty {display: none !important;}
     
-    div.stButton > button:first-child { 
-        margin-top: -40px !important; 
-        background-color: #FF4B4B !important; 
-        color: white !important;
+    /* Input Box styling to match Mic */
+    div[data-testid="stChatInput"] { 
+        margin-left: 50px !important; 
     }
     
-    /* Input Box shift to make space for Mic */
-    div[data-testid="stChatInput"] { margin-left: 60px !important; }
-    
-    /* Centered Mic Icon (Image Icon Removed) */
+    /* Mic Icon positioned right next to chat placeholder */
     .mic-container { 
         position: fixed; 
-        bottom: 32px; 
-        left: 15px; 
+        bottom: 37px; /* Adjusted to align with input bar height */
+        left: 20px; 
         z-index: 1005 !important; 
-        background-color: #FF4B4B;
-        border-radius: 50%;
-        width: 45px;
-        height: 45px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid white;
+    }
+
+    /* Professional Mic Button Style */
+    .mic-container button {
+        background-color: #FF4B4B !important;
+        border-radius: 50% !important;
+        width: 42px !important;
+        height: 42px !important;
+        border: 2px solid white !important;
+        box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
     }
 
     .menu-card { background-color: #121212; padding: 25px; border-radius: 15px; border: 1px solid #FF4B4B; margin-bottom: 20px; }
@@ -74,15 +72,6 @@ if st.session_state.show_menu:
     st.subheader("⚖️ Terms & Conditions")
     st.write("This service is for ethical use. AI-generated responses should be cross-verified for critical tasks.")
     st.divider()
-    st.subheader("📬 Feedback")
-    fb = st.text_area("Your feedback helps us grow:")
-    if st.button("Submit"):
-        try:
-            r = requests.post(f"https://api.github.com/repos/{st.secrets['GITHUB_REPO']}/issues", 
-                              json={"title": "Voice App Feedback", "body": fb}, 
-                              headers={"Authorization": f"token {st.secrets['GITHUB_TOKEN']}"})
-            if r.status_code == 201: st.success("Feedback recorded!")
-        except: st.error("Link Error.")
     if st.button("🗑️ Clear Chat"):
         st.session_state.messages = []
         st.rerun()
@@ -92,12 +81,12 @@ if st.session_state.show_menu:
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-# --- MIC REPLACED IMAGE ICON ---
+# --- MIC PLACED NEXT TO CHAT INPUT ---
 st.markdown('<div class="mic-container">', unsafe_allow_html=True)
 audio = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='recorder')
 st.markdown('</div>', unsafe_allow_html=True)
 
-user_query = st.chat_input("Yahan puchiye...")
+user_query = st.chat_input("Ask Pro AI something...")
 
 # Process Voice
 if audio and st.session_state.last_audio_id != audio['id']:
@@ -117,7 +106,6 @@ if user_query:
     with st.chat_message("user"): st.markdown(user_query)
 
     try:
-        # Standard Text Model (Llama 3.3)
         messages = [{"role": "user", "content": f"{ts} User: {user_query}. Respond in Hindi-English mix."}]
         model = "llama-3.3-70b-versatile"
 
