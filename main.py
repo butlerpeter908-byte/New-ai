@@ -16,16 +16,21 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: STABLE UI =================
+# ================= CSS: STABLE UI & WHITE LINE REMOVAL =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     
+    /* Removing default borders/lines to fix the white line issue */
+    hr {border: none !important;}
+    div.stChatFloatingInputContainer {border-top: none !important;}
+    
     div[data-testid="stChatInput"] { 
         margin-left: 65px !important; 
         z-index: 1000;
+        border: none !important;
     }
 
     .mic-fixed-container { 
@@ -66,7 +71,7 @@ if "show_menu" not in st.session_state:
 
 st.title("🚀 Pro AI")
 
-# ================= MENU SECTION (PROTECTED) =================
+# ================= MENU SECTION (NO CHANGES) =================
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
@@ -89,7 +94,6 @@ if st.session_state.show_menu:
     f_text = st.text_area("Your feedback:", key="feedback_box")
     if st.button("Submit Feedback"):
         if f_text:
-            # Clear input logic and show Pop-up
             st.toast("Thank you for your feedback!", icon="🎉")
             st.success("Thank you for your feedback!")
         else:
@@ -104,7 +108,7 @@ if st.session_state.show_menu:
 
 # ================= MIC ALWAYS ON =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_stable_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_stable_mic_v12')
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= CHAT DISPLAY =================
@@ -114,7 +118,7 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC (FIXED) =================
+# ================= VOICE LOGIC =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
@@ -125,7 +129,6 @@ if audio_data:
                     model="whisper-large-v3",
                     response_format="text"
                 )
-                
                 if transcription and len(transcription.strip()) > 1:
                     u_input = transcription
         except Exception as e:
