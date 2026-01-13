@@ -16,27 +16,30 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: HIDING MANAGE APP & UI FIXES =================
+# ================= CSS: STERN WHITE LINE REMOVAL =================
 st.markdown("""
     <style>
-    /* Hiding Streamlit Branding and Manage App button for others */
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
     #MainMenu {visibility: hidden;}
     
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     
-    /* Removing White Line */
+    /* Strict removal of the white line / border-top */
     hr {border: none !important; display: none !important;}
-    div.stChatFloatingInputContainer {border: none !important; box-shadow: none !important;}
+    div.stChatFloatingInputContainer {
+        border-top: none !important; 
+        box-shadow: none !important;
+        background-color: transparent !important;
+    }
     
     div[data-testid="stChatInput"] { 
         margin-left: 65px !important; 
         z-index: 1000; 
-        border: none !important; 
+        border: none !important;
+        background-color: #1A1A1A !important;
     }
 
-    /* Fixed Mic Position */
     .mic-fixed-container { 
         position: fixed; 
         bottom: 10px; 
@@ -71,7 +74,7 @@ if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
 st.title("🚀 Pro AI")
 
-# ================= MENU SECTION (UNCHANGED) =================
+# ================= MENU SECTION (NO CHANGES) =================
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
@@ -99,7 +102,7 @@ if st.session_state.show_menu:
 
 # ================= MIC DISPLAY =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v17')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v18')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
@@ -107,7 +110,7 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC =================
+# ================= VOICE LOGIC (UNCHANGED) =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
@@ -122,7 +125,7 @@ if audio_data:
                     u_input = transcription
         except: u_input = None
 
-# ================= TIME, DATE & WEATHER LOGIC =================
+# ================= AI RESPONSE LOGIC =================
 if u_input:
     IST = pytz.timezone('Asia/Kolkata')
     now = datetime.datetime.now(IST)
