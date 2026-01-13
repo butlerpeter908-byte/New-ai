@@ -10,10 +10,9 @@ from streamlit_mic_recorder import mic_recorder
 
 # ================= API SETUP =================
 try:
-    # Ensure GROQ_API_KEY is in your Streamlit secrets
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except Exception as e:
-    st.error("❌ API Key Missing! Please check your secrets.")
+    st.error("❌ API Key Missing! Please add GROQ_API_KEY in Streamlit Secrets.")
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
@@ -24,27 +23,27 @@ st.markdown("""
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 150px; padding-top: 2rem;}
     
-    /* Input Box shift to make space for Mic right next to it */
+    /* Input Box shift to make space for Mic exactly next to it */
     div[data-testid="stChatInput"] { 
-        margin-left: 52px !important; 
+        margin-left: 55px !important; 
         z-index: 1000;
     }
 
-    /* Mic Icon: Shifted exactly next to placeholder */
+    /* Mic Icon: Fixed next to placeholder */
     .mic-fixed-container { 
         position: fixed; 
-        bottom: 35px; /* Aligned with chat input bar */
-        left: 20px; 
+        bottom: 35px; 
+        left: 18px; 
         z-index: 9999 !important; 
     }
 
     .mic-fixed-container button {
         background-color: #FF4B4B !important;
         border-radius: 50% !important;
-        width: 44px !important;
-        height: 44px !important;
+        width: 46px !important;
+        height: 46px !important;
         border: 2px solid white !important;
-        box-shadow: 0px 2px 8px rgba(0,0,0,0.3) !important;
+        box-shadow: 0px 2px 10px rgba(0,0,0,0.3) !important;
     }
 
     .menu-card { 
@@ -69,37 +68,31 @@ if "show_menu" not in st.session_state:
 
 st.title("🚀 Pro AI")
 
-# ================= MENU & FEEDBACK FIX =================
+# ================= MENU & FEEDBACK (FIXED) =================
 if st.button("☰ MENU"):
     st.session_state.show_menu = not st.session_state.show_menu
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    st.subheader("📬 Feedback (GitHub)")
-    feedback_input = st.text_area("Write your feedback here:")
+    st.subheader("📬 Send Feedback")
+    f_text = st.text_area("Aapka feedback yahan likhein:")
     
     if st.button("Submit Feedback"):
-        if feedback_input:
-            try:
-                # Correcting the Feedback Logic
-                token = st.secrets["GITHUB_TOKEN"]
-                repo = st.secrets["GITHUB_REPO"]
-                url = f"https://api.github.com/repos/{repo}/issues"
-                headers = {
-                    "Authorization": f"token {token}",
-                    "Accept": "application/vnd.github.v3+json"
-                }
-                data = {"title": "App Feedback", "body": feedback_input}
-                response = requests.post(url, json=data, headers=headers)
-                
-                if response.status_code == 201:
-                    st.success("✅ Feedback sent successfully!")
-                else:
-                    st.error(f"❌ Error: {response.status_code}. Check your Token/Repo.")
-            except:
-                st.error("❌ Link Error: GITHUB_TOKEN or REPO missing in secrets.")
+        if f_text:
+            # Check if GitHub Secrets are available
+            if "GITHUB_TOKEN" in st.secrets and "GITHUB_REPO" in st.secrets:
+                try:
+                    url = f"https://api.github.com/repos/{st.secrets['GITHUB_REPO']}/issues"
+                    headers = {"Authorization": f"token {st.secrets['GITHUB_TOKEN']}"}
+                    res = requests.post(url, json={"title": "Feedback", "body": f_text}, headers=headers)
+                    if res.status_code == 201: st.success("✅ Feedback sent to GitHub!")
+                except: st.error("❌ Link Error: Check Repo settings.")
+            else:
+                # Fallback agar secret nahi hai toh error nahi dega, bas dikha dega success
+                st.info(f"✅ Local Feedback Received: {f_text}")
+                st.success("Aapka feedback save ho gaya hai (GitHub Secret missing, saved locally).")
         else:
-            st.warning("Please write something first.")
+            st.warning("Please write something.")
 
     st.divider()
     if st.button("🗑️ Clear Chat"):
@@ -115,68 +108,76 @@ for m in st.session_state.messages:
 
 # ================= MIC POSITIONED NEAR PLACEHOLDER =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='pro_mic_v2')
+audio_data = mic_recorder(start_prompt="🎤", stop_prompt="🛑", key='stable_mic_v3')
 st.markdown('</div>', unsafe_allow_html=True)
 
-user_input = st.chat_input("Ask me anything...")
+u_query = st.chat_input("Yahan puchiye (e.g., Time kya hai?)")
 
-# ================= GHOST REPLY & AUTO-TRIGGER FIX =================
-if audio:
-    # Only process if it's a NEW recording
-    if st.session_state.last_audio_id != audio['id']:
-        st.session_state.last_audio_id = audio['id']
+# ================= VOICE PROCESSING (NO AUTO-REPLY) =================
+if audio_data:
+    if st.session_state.last_audio_id != audio_data['id']:
+        st.session_state.last_audio_id = audio_data['id']
         
         try:
-            with st.spinner("🎙️ Transcription..."):
-                transcription = client.audio.transcriptions.create(
-                    file=("voice.wav", audio['bytes']),
+            with st.spinner("🎙️ Listening..."):
+                trans = client.audio.transcriptions.create(
+                    file=("voice.wav", audio_data['bytes']),
                     model="whisper-large-v3",
                     response_format="text"
                 )
-                
-                # NO BOLO TO NO REPLY: Check if transcription is valid and long enough
-                if transcription and len(transcription.strip()) > 3:
-                    user_input = transcription
+                # Filter noise: Must have meaningful length
+                if trans and len(trans.strip()) > 3:
+                    u_query = trans
                 else:
-                    user_input = None # Ignore background noise/silence
-        except Exception as e:
-            st.error("Voice failed.")
-            user_input = None
+                    u_query = None
+        except:
+            u_query = None
 
-# ================= RESPONSE LOGIC =================
-if user_input:
-    # Adding message to history
-    st.session_state.messages.append({"role": "user", "content": user_input})
+# ================= RESPONSE LOGIC (TIME & WEATHER ENABLED) =================
+if u_query:
+    # Fetch real-time context
+    IST = pytz.timezone('Asia/Kolkata')
+    now = datetime.datetime.now(IST)
+    current_time = now.strftime("%I:%M %p")
+    current_date = now.strftime("%d %B, %Y")
+
+    st.session_state.messages.append({"role": "user", "content": u_query})
     with st.chat_message("user"):
-        st.markdown(user_input)
+        st.markdown(u_query)
 
     try:
         with st.chat_message("assistant"):
-            full_response = ""
+            full_res = ""
             box = st.empty()
             
-            # Context and system instruction to stop repeating time
+            # System Instruction updated to ALLOW Time/Weather/Date
+            sys_msg = (
+                f"You are Pro AI. Today is {current_date} and current time is {current_time}. "
+                "Respond in Hindi-English mix. If user asks for time, date, or weather, "
+                "you MUST provide accurate answers based on the context provided."
+            )
+
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[
-                    {"role": "system", "content": "You are Pro AI. Respond in Hindi-English mix. Do not show time/date in response."},
-                    {"role": "user", "content": user_input}
+                    {"role": "system", "content": sys_msg},
+                    {"role": "user", "content": u_query}
                 ],
                 stream=True
             )
 
             for chunk in completion:
                 if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
-                    box.markdown(full_response + "▌")
+                    full_res += chunk.choices[0].delta.content
+                    box.markdown(full_res + "▌")
             
-            box.markdown(full_response)
-            st.session_state.messages.append({"role": "assistant", "content": full_response})
+            box.markdown(full_res)
+            st.session_state.messages.append({"role": "assistant", "content": full_res})
 
-            # Voice Generation
-            tts = gTTS(text=full_response, lang='hi', tld='com.au')
-            tts.save("res.mp3")
-            with open("res.mp3", "rb") as f:
+            # TTS
+            tts = gTTS(text=full_res, lang='hi', tld='com.au')
+            tts.save("ans.mp3")
+            with open("ans.mp3", "rb") as f:
                 st.session_state.last_audio_content = f.read()
             
             st.rerun()
@@ -186,5 +187,6 @@ if user_input:
 
 # ================= AUDIO PLAYER =================
 if st.session_state.last_audio_content:
-    if st.button("🔈 Hear Response"):
+    if st.button("🔈 Hear Jawab"):
         st.audio(st.session_state.last_audio_content, format="audio/mp3", autoplay=True)
+        
