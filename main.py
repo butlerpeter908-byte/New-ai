@@ -16,14 +16,13 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: STABLE UI & WHITE LINE REMOVAL =================
+# ================= CSS: STABLE UI (NO CHANGES) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     
-    /* Removing default borders/lines to fix the white line issue */
     hr {border: none !important;}
     div.stChatFloatingInputContainer {border-top: none !important;}
     
@@ -77,19 +76,13 @@ if st.button("☰ MENU"):
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    
     st.subheader("📖 About Pro AI")
     st.info("Pro AI is a professional multimodal assistant using Whisper V3 and Llama 3.3.")
-    
     st.subheader("🔒 Privacy Policy")
     st.write("Your conversations are private. We do not store any voice or text data.")
-    
     st.subheader("⚖️ Terms & Conditions")
     st.write("Use ethically. Verify critical information independently.")
-    
     st.divider()
-
-    # --- FEEDBACK WITH POP-UP ---
     st.subheader("📬 Send Feedback")
     f_text = st.text_area("Your feedback:", key="feedback_box")
     if st.button("Submit Feedback"):
@@ -98,7 +91,6 @@ if st.session_state.show_menu:
             st.success("Thank you for your feedback!")
         else:
             st.warning("Please enter something before submitting.")
-    
     st.divider()
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
@@ -106,9 +98,9 @@ if st.session_state.show_menu:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= MIC ALWAYS ON =================
+# ================= MIC DISPLAY =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_stable_mic_v12')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v13')
 st.markdown('</div>', unsafe_allow_html=True)
 
 # ================= CHAT DISPLAY =================
@@ -118,7 +110,7 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC =================
+# ================= VOICE LOGIC (BUG FIXED) =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
@@ -127,10 +119,18 @@ if audio_data:
                 transcription = client.audio.transcriptions.create(
                     file=("voice.wav", audio_data['bytes']),
                     model="whisper-large-v3",
-                    response_format="text"
+                    response_format="text",
+                    temperature=0.0 # Strict output to avoid hallucinations like "Okay/Thank you"
                 )
-                if transcription and len(transcription.strip()) > 1:
+                
+                # Filtering out short/noise words
+                bad_words = ["okay", "thank you", "thanks", "okay.", "thank you.", "bye"]
+                clean_txt = transcription.strip().lower()
+                
+                if clean_txt and clean_txt not in bad_words and len(clean_txt) > 2:
                     u_input = transcription
+                else:
+                    u_input = None
         except Exception as e:
             st.error(f"Voice Error: {e}")
 
@@ -177,4 +177,3 @@ if u_input:
 if st.session_state.last_audio_content:
     if st.button("🔈 Hear Response"):
         st.audio(st.session_state.last_audio_content, format="audio/mp3", autoplay=True)
-        
