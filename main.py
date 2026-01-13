@@ -16,7 +16,7 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: STABLE MIC & ALIGNMENT =================
+# ================= CSS: STABLE MIC & UI =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden;}
@@ -24,11 +24,11 @@ st.markdown("""
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     
     div[data-testid="stChatInput"] { 
-        margin-left: 62px !important; 
+        margin-left: 65px !important; 
         z-index: 1000;
     }
 
-    /* Stable Mic Position */
+    /* Fixed Mic Position - Ultra Bottom */
     .mic-fixed-container { 
         position: fixed; 
         bottom: 8px; 
@@ -47,10 +47,10 @@ st.markdown("""
 
     .menu-card { 
         background-color: #121212; 
-        padding: 30px; 
-        border-radius: 20px; 
+        padding: 25px; 
+        border-radius: 15px; 
         border: 1px solid #FF4B4B; 
-        margin-bottom: 25px; 
+        margin-bottom: 20px; 
     }
     </style>
 """, unsafe_allow_html=True)
@@ -74,16 +74,16 @@ if st.button("☰ MENU"):
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
     st.subheader("📖 About Pro AI")
-    st.write("Pro AI is a professional-grade multimodal assistant using Whisper and Llama 3.3.")
+    st.info("Pro AI is a professional multimodal assistant using Whisper V3 and Llama 3.3.")
     st.subheader("🔒 Privacy Policy")
-    st.write("We take your data security seriously. No data is stored.")
+    st.write("Your conversations are private. We do not store any voice or text data.")
     st.subheader("⚖️ Terms & Conditions")
-    st.write("Use Pro AI responsibly for ethical purposes.")
+    st.write("Use ethically. Verify critical information independently.")
     st.divider()
     st.subheader("📬 Send Feedback")
-    user_feedback = st.text_area("Share your feedback:")
-    if st.button("Submit Feedback"):
-        if user_feedback: st.success("✅ Feedback received!")
+    f_text = st.text_area("Your feedback:")
+    if st.button("Submit"):
+        if f_text: st.success("✅ Feedback received!")
     st.divider()
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
@@ -91,54 +91,65 @@ if st.session_state.show_menu:
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= MIC DISPLAY (ALWAYS PRESENT) =================
+# ================= MIC ALWAYS ON SCREEN =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='pro_ai_persistent_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='stable_mic_v11')
 st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= DISPLAY CHAT =================
+# ================= CHAT DISPLAY =================
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-u_query = st.chat_input("Ask me anything...")
+u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE PROCESSING =================
+# ================= VOICE PROCESSING (NO HELLO/NOISE BUG) =================
 if audio_data:
     if st.session_state.last_audio_id != audio_data['id']:
         st.session_state.last_audio_id = audio_data['id']
         try:
-            with st.spinner("🎙️ Listening..."):
-                trans = client.audio.transcriptions.create(
+            with st.spinner("🎙️ Transcribing..."):
+                # Using Whisper-Large-V3 for better accuracy
+                transcription = client.audio.transcriptions.create(
                     file=("voice.wav", audio_data['bytes']),
                     model="whisper-large-v3",
-                    response_format="text"
+                    response_format="text",
+                    prompt="The user is speaking about time, weather, or general questions. Ignore background noise and silence."
                 )
-                if trans and len(trans.strip()) > 2:
-                    u_query = trans
-        except:
-            u_query = None
+                
+                # Logic: Ignore noise like "Thank you." or "Hello." if it's very short
+                clean_text = transcription.strip().replace(".", "")
+                if clean_text and len(clean_text) > 2:
+                    u_input = transcription
+                else:
+                    u_input = None
+        except Exception as e:
+            st.error(f"Voice Error: {e}")
+            u_input = None
 
-# ================= RESPONSE ENGINE =================
-if u_query:
+# ================= AI RESPONSE ENGINE =================
+if u_input:
     IST = pytz.timezone('Asia/Kolkata')
     now = datetime.datetime.now(IST)
-    current_time = now.strftime("%I:%M %p")
-    current_date = now.strftime("%d %B, %Y")
+    curr_time = now.strftime("%I:%M %p")
+    curr_date = now.strftime("%d %B, %Y")
 
-    st.session_state.messages.append({"role": "user", "content": u_query})
+    st.session_state.messages.append({"role": "user", "content": u_input})
     with st.chat_message("user"):
-        st.markdown(u_query)
+        st.markdown(u_input)
 
     try:
         with st.chat_message("assistant"):
             full_res = ""
             box = st.empty()
-            sys_msg = f"You are Pro AI. Context: {current_date}, {current_time}. Respond in English. Only mention time/date if asked."
+            sys_msg = (
+                f"You are Pro AI. Context: Today is {curr_date}, Time is {curr_time}. "
+                "Respond in English. IMPORTANT: Only mention time/date if specifically asked."
+            )
 
             completion = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": u_query}],
+                messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": u_input}],
                 stream=True
             )
 
@@ -150,13 +161,15 @@ if u_query:
             box.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
 
+            # English TTS
             tts = gTTS(text=full_res, lang='en', tld='com.au')
             tts.save("ans.mp3")
             with open("ans.mp3", "rb") as f:
                 st.session_state.last_audio_content = f.read()
             st.rerun()
+
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"AI Error: {e}")
 
 if st.session_state.last_audio_content:
     if st.button("🔈 Hear Response"):
