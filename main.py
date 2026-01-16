@@ -72,7 +72,7 @@ if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = Non
 if "last_audio_content" not in st.session_state: st.session_state.last_audio_content = None
 if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
-st.title("🚀 Pro AI")
+st.title("🚀 Saif Ka AI")
 
 # ================= MENU SECTION (NO CHANGES) =================
 if st.button("☰ MENU"):
