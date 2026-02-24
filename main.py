@@ -18,52 +18,72 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= ADVANCED CSS (GEMINI STYLE) =================
+# ================= ADVANCED CSS (YELLOW THEME & FUNCTIONAL PLUS) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
     #MainMenu {visibility: hidden;}
-    .block-container {padding-bottom: 100px; padding-top: 2rem;}
-    
-    /* Input Container Styling */
-    div[data-testid="stChatInput"] {
-        padding-left: 90px !important;
-        padding-right: 50px !important;
+    .block-container {padding-bottom: 120px; padding-top: 2rem;}
+
+    /* Chat Input Adjustments */
+    div[data-testid="stChatInput"] { 
+        margin-left: 110px !important; 
+        z-index: 1000; 
     }
 
-    /* Fixed Plus Button (Gemini Style) */
-    .plus-btn-container {
+    /* Professional Yellow Plus Icon Logic */
+    .stFileUploader {
         position: fixed;
-        bottom: 34px;
-        left: 30px;
-        z-index: 2000;
-        background: #1e1e1e;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 1px solid #333;
+        bottom: 35px;
+        left: 20px;
+        width: 45px;
+        height: 45px;
+        z-index: 2005;
+        overflow: hidden;
+    }
+    
+    /* Making the uploader look like a Yellow Plus Button */
+    .stFileUploader section {
+        padding: 0 !important;
+        background-color: #FFD700 !important; /* Gold/Yellow Theme */
+        border-radius: 50% !important;
+        border: 2px solid #000 !important;
+        width: 45px !important;
+        height: 45px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
 
-    /* Fixed Mic Button (Side of Chat) */
+    /* Hide the default text of uploader */
+    .stFileUploader label, .stFileUploader small { display: none !important; }
+    .stFileUploader section > div { display: none !important; }
+    
+    /* Custom '+' symbol inside yellow circle */
+    .stFileUploader section::before {
+        content: '+';
+        color: black;
+        font-size: 30px;
+        font-weight: bold;
+        line-height: 45px;
+    }
+
+    /* Mic Position */
     .mic-wrap {
         position: fixed;
-        bottom: 28px;
-        left: 80px;
+        bottom: 30px;
+        left: 75px;
         z-index: 2001;
     }
     
     .mic-wrap button {
         background-color: transparent !important;
         border: none !important;
-        font-size: 20px !important;
-        color: #FF4B4B !important;
+        font-size: 24px !important;
     }
 
-    .menu-card { background-color: #121212; padding: 20px; border-radius: 12px; border: 1px solid #FF4B4B; margin-bottom: 20px; }
+    .menu-card { background-color: #121212; padding: 20px; border-radius: 12px; border: 1px solid #FFD700; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -75,17 +95,19 @@ if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
 st.title("🚀 Pro AI")
 
-# ================= SIDE BUTTONS (PLUS & MIC) =================
-# Plus Icon Overlay
-st.markdown('<div class="plus-btn-container">➕</div>', unsafe_allow_html=True)
-# Hidden file uploader that triggers on idea
-with st.sidebar:
-    uploaded_file = st.file_uploader("Upload Image/Video", type=["png", "jpg", "mp4"])
+# ================= FUNCTIONAL COMPONENTS =================
 
-# Mic Overlay
+# 1. Plus Icon (Yellow & Working)
+uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "mp4"], key="plus_uploader")
+
+# 2. Mic Icon
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='gemini_style_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='pro_mic_v25')
 st.markdown('</div>', unsafe_allow_html=True)
+
+# File logic
+if uploaded_file:
+    st.toast(f"✅ File Ready: {uploaded_file.name}", icon="📁")
 
 # ================= MENU =================
 if st.button("☰ MENU"):
@@ -93,9 +115,7 @@ if st.button("☰ MENU"):
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    st.subheader("🎬 AI Video Gen")
-    if st.button("Generate Sample Video"):
-        st.info("Video API integration active.")
+    st.subheader("🎬 Video Generator")
     if st.button("🗑️ Clear Chat"):
         st.session_state.messages = []
         st.rerun()
@@ -120,16 +140,13 @@ if audio_data and st.session_state.last_audio_id != audio_data['id']:
     except: pass
 
 if u_input:
-    IST = pytz.timezone('Asia/Kolkata')
-    curr_time = datetime.datetime.now(IST).strftime("%I:%M %p")
-    
     st.session_state.messages.append({"role": "user", "content": u_input})
     with st.chat_message("user"): st.markdown(u_input)
 
     with st.chat_message("assistant"):
         full_res = ""
         box = st.empty()
-        sys_msg = f"You are Pro AI. Time: {curr_time}. Respond like a premium AI assistant."
+        sys_msg = "You are Pro AI, a helpful and professional assistant."
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": u_input}],
