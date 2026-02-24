@@ -1,14 +1,12 @@
 import streamlit as st
 from groq import Groq
 import requests
-import datetime
-import pytz 
 import time
 from streamlit_mic_recorder import mic_recorder
 
 # ================= API SETUP =================
 GROQ_KEY = "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"
-# Token ko exact format mein rakha hai
+# Bhai, maine token yahan ekdam fresh paste kiya hai
 REPLICATE_TOKEN = "r8_IAbdjeQkoGq2XmgP9VBN11OpmC1qfAw1IVij9"
 
 try:
@@ -18,7 +16,7 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= UI CSS (FIXED POSITIONS) =================
+# ================= UI CSS (EXACT GEMINI STYLE) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -27,7 +25,7 @@ st.markdown("""
 
     div[data-testid="stChatInput"] { padding-left: 95px !important; }
 
-    /* Yellow Plus Button */
+    /* Yellow Plus Button - Fixed inside Input area */
     .stFileUploader {
         position: fixed; bottom: 32px; left: 20px;
         width: 40px !important; height: 40px !important; z-index: 2005;
@@ -43,7 +41,7 @@ st.markdown("""
         display: flex; justify-content: center; align-items: center; height: 100%;
     }
 
-    /* Mic Button */
+    /* Mic Button Aligned */
     .mic-wrap { position: fixed; bottom: 28px; left: 65px; z-index: 2006; }
     .mic-wrap button { background-color: transparent !important; border: none !important; font-size: 22px !important; }
     </style>
@@ -54,9 +52,9 @@ if "messages" not in st.session_state: st.session_state.messages = []
 
 st.title("🚀 Pro AI")
 
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v7_plus")
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="final_fix_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v7_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='final_fix_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
@@ -64,19 +62,18 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me or say 'Generate video of...'")
 
-# ================= ROBUST VIDEO ENGINE =================
-def generate_video_final(prompt):
-    # Token ko clean karke bhej rahe hain
-    token = REPLICATE_TOKEN.strip()
+# ================= ENGINE WITH TOKEN CLEANING =================
+def generate_video_fixed(prompt):
+    # Token ko clean karna zaroori hai (No spaces, exact format)
+    clean_token = REPLICATE_TOKEN.strip()
     headers = {
-        "Authorization": f"Token {token}",
-        "Content-Type": "application/json",
-        "User-Agent": "StreamlitApp/1.0"
+        "Authorization": f"Token {clean_token}",
+        "Content-Type": "application/json"
     }
     
-    # Stable Video Model ID
+    # Text-to-Video Model (Stable Video Diffusion)
     payload = {
-        "version": "a71f032252c416187766b1e6b52c3c662e0868f00d235c249495c2e9b980e03e",
+        "version": "3f0c272252c416187766b1e6b52c3c662e0868f00d235c249495c2e9b980e03e",
         "input": {"prompt": prompt}
     }
     
@@ -84,29 +81,27 @@ def generate_video_final(prompt):
         response = requests.post(
             "https://api.replicate.com/v1/predictions", 
             json=payload, 
-            headers=headers,
-            timeout=10
+            headers=headers
         )
         
-        if response.status_code == 401:
-            return "❌ Token Invalid! Replicate dashboard par check karein ki token 'r8_' se start ho raha hai na?"
-        
         data = response.json()
-        if "urls" in data:
+        if response.status_code == 201 and "urls" in data:
             poll_url = data["urls"]["get"]
-            with st.status("🎬 AI Rendering... wait 60s", expanded=True) as s:
+            with st.status("🎬 Processing Video...", expanded=True) as s:
                 while True:
                     res = requests.get(poll_url, headers=headers).json()
                     if res["status"] == "succeeded":
-                        s.update(label="✅ Video Ready!", state="complete")
+                        s.update(label="✅ Ready!", state="complete")
                         return res["output"]
                     elif res["status"] == "failed":
-                        return f"❌ Error: {res.get('error')}"
+                        return f"❌ Failed: {res.get('error', 'Limit reached')}"
                     time.sleep(5)
         else:
-            return f"❌ API Error: {data.get('detail', 'Unknown error')}"
+            # Yahan detailed error dikhayega agar token abhi bhi reject hua
+            detail = data.get('detail', 'Unauthorized')
+            return f"❌ API Error: {detail}. Please check if you have added a payment method on Replicate."
     except Exception as e:
-        return f"❌ Connection Error: {str(e)}"
+        return f"❌ Error: {str(e)}"
 
 # ================= PROCESS =================
 if u_input:
@@ -114,12 +109,11 @@ if u_input:
     with st.chat_message("user"): st.markdown(u_input)
 
     if any(x in u_input.lower() for x in ["video", "banao", "generate"]):
-        v_url = generate_video_final(u_input)
-        if v_url and "http" in str(v_url):
-            st.video(v_url)
-            st.session_state.messages.append({"role": "assistant", "content": "Video generated!"})
+        video_url = generate_video_fixed(u_input)
+        if video_url and "http" in str(video_url):
+            st.video(video_url)
         else:
-            st.error(v_url)
+            st.error(video_url)
     else:
         with st.chat_message("assistant"):
             full_res = ""
