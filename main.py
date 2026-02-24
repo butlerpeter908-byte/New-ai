@@ -2,28 +2,30 @@ import streamlit as st
 from groq import Groq
 import requests
 import random
+from gtts import gTTS
+import os
+import base64
 from streamlit_mic_recorder import mic_recorder
 
 # ================= API SETUP =================
 GROQ_KEY = "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"
-# Aapki fresh Pexels API Key maine yahan daal di hai
-PEXELS_API_KEY = "KepM3s6J4wl9TaIjAFuso1aU2wJStlw06hKNACJnRbYmh831W0r01rmi" 
+PEXELS_API_KEY = "KepM3s6J4wl9TaIjAFuso1aU2wJStlw06hKNACJnRbYmh831W0r01rmi"
 
 try:
     client = Groq(api_key=GROQ_KEY)
 except Exception as e:
-    st.error("❌ Groq Error! Key check karein.")
+    st.error("❌ Groq Error!")
 
-st.set_page_config(page_title="Pro AI", layout="wide")
+st.set_page_config(page_title="Pro Talking AI", layout="wide")
 
-# ================= UI CSS (MODERN DARK) =================
+# ================= CSS (DARK MODE) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
-    .block-container {padding-bottom: 120px; padding-top: 1rem; background-color: #0E1117;}
+    .block-container {padding-bottom: 150px; padding-top: 1rem; background-color: #0E1117;}
     div[data-testid="stChatInput"] { padding-left: 95px !important; }
-
+    
     .stFileUploader {
         position: fixed; bottom: 32px; left: 20px;
         width: 40px !important; height: 40px !important; z-index: 2005;
@@ -37,91 +39,94 @@ st.markdown("""
         content: '+'; color: black; font-size: 24px; font-weight: bold;
         display: flex; justify-content: center; align-items: center; height: 100%;
     }
-
     .mic-wrap { position: fixed; bottom: 28px; left: 65px; z-index: 2006; }
     .mic-wrap button { background-color: transparent !important; border: none !important; font-size: 20px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= VIDEO SEARCH ENGINE =================
+# ================= UTILITY FUNCTIONS =================
+
 def get_pexels_video(query):
     headers = {"Authorization": PEXELS_API_KEY}
-    # Search for HD videos
+    # Sirf main keywords nikalna search ke liye
     url = f"https://api.pexels.com/videos/search?query={query}&per_page=1"
-    
     try:
         response = requests.get(url, headers=headers)
         if response.status_code == 200:
             data = response.json()
             if data['videos']:
-                # HD Quality video link
                 return data['videos'][0]['video_files'][0]['link']
-        elif response.status_code == 401:
-            return "AUTH_ERROR"
-        return None
     except:
         return None
+    return None
 
-# ================= MAIN FLOW =================
-if "messages" not in st.session_state: st.session_state.messages = []
-st.title("🚀 Pro AI")
+def text_to_speech_autoplay(text):
+    tts = gTTS(text=text, lang='hi', slow=False)
+    tts.save("speech.mp3")
+    with open("speech.mp3", "rb") as f:
+        data = f.read()
+        b64 = base64.b64encode(data).decode()
+        md = f"""
+            <audio autoplay="true">
+            <source src="data:audio/mp3;base64,{b64}" type="audio/mp3">
+            </audio>
+            """
+        st.markdown(md, unsafe_allow_html=True)
 
-# Floating Buttons
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="final_v1")
+# ================= MAIN APP =================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+st.title("🚀 Pro Talking AI")
+
+# Icons Setup
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="talk_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='final_mic_v1')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='talk_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
-# Chat History
+# Display History
 for m in st.session_state.messages:
-    with st.chat_message(m["role"]): st.markdown(m["content"])
+    with st.chat_message(m["role"]):
+        st.markdown(m["content"])
 
-u_input = st.chat_input("Try: 'Show video of a beach'...")
+# User Input
+u_input = st.chat_input("Mujhse kuch bhi bulwao...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
-    with st.chat_message("user"): st.markdown(u_input)
+    with st.chat_message("user"):
+        st.markdown(u_input)
 
     low_input = u_input.lower()
-    
-    # 🎬 VIDEO LOGIC (High Speed)
-    if any(x in low_input for x in ["video", "dikhao", "show"]):
-        with st.chat_message("assistant"):
-            with st.spinner("🎬 Searching HD Video Library..."):
-                # Clean prompt to get better search results
-                search_query = low_input.replace("video", "").replace("show", "").replace("me", "").replace("of", "").strip()
-                v_url = get_pexels_video(search_query if search_query else "nature")
-                
-                if v_url == "AUTH_ERROR":
-                    st.error("❌ Pexels Key issue! Please check if your email is verified.")
-                elif v_url:
-                    st.video(v_url)
-                    st.session_state.messages.append({"role": "assistant", "content": f"Loaded HD video for '{search_query}'"})
-                else:
-                    st.warning("⚠️ No video found. Try another topic!")
-    
-    # 🖼️ IMAGE LOGIC (Pollinations)
-    elif any(x in low_input for x in ["image", "photo", "banao"]):
-        with st.chat_message("assistant"):
-            with st.spinner("🖼️ Generating Image..."):
-                img_url = f"https://image.pollinations.ai/prompt/{u_input.replace(' ','%20')}?nologo=true&seed={random.randint(1,999)}"
-                st.image(img_url)
-                st.session_state.messages.append({"role": "assistant", "content": "Image generated!"})
-    
-    # 💬 SMART CHAT (Groq)
-    else:
-        with st.chat_message("assistant"):
-            full_res = ""
-            box = st.empty()
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": u_input}],
-                stream=True
-            )
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    full_res += chunk.choices[0].delta.content
-                    box.markdown(full_res + "▌")
-            box.markdown(full_res)
-            st.session_state.messages.append({"role": "assistant", "content": full_res})
-            
+
+    with st.chat_message("assistant"):
+        # 🎬 1. Video Handle Karo
+        with st.spinner("🎬 Creating visual..."):
+            # Simple keyword extraction for video search
+            search_query = u_input.replace("video", "").replace("show", "").replace("create", "").strip()
+            v_url = get_pexels_video(search_query if search_query else "abstract")
+            if v_url:
+                st.video(v_url, loop=True)
+            else:
+                st.info("Pexels par video nahi mili, par meri awaz suno!")
+
+        # 💬 2. Chat & Voice Handle Karo
+        full_res = ""
+        box = st.empty()
+        
+        # Get AI Response from Groq
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": u_input}],
+            stream=False # Voice ke liye streaming off rakhi hai taaki pura text ek sath mile
+        )
+        full_res = completion.choices[0].message.content
+        box.markdown(full_res)
+        
+        # 🎙️ Generate Voice and Autoplay
+        with st.spinner("🎙️ AI is speaking..."):
+            text_to_speech_autoplay(full_res)
+        
+        st.session_state.messages.append({"role": "assistant", "content": full_res})
+        
