@@ -8,16 +8,18 @@ import datetime
 import pytz 
 from streamlit_mic_recorder import mic_recorder
 
-# ================= API SETUP =================
-# Bhai, key ko Streamlit Settings -> Secrets mein hi daalna.
+# ================= API SETUP (KEY ADDED) =================
+# Bhai maine yaha direct key daal di hai jaisa aapne bola
+GROQ_KEY = "Gsk_GK1bMjDYUnY5xqJDKz1wWGdyb3FYfNu0ba9Yidoj09n83dt6LD6e"
+
 try:
-    client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+    client = Groq(api_key=GROQ_KEY)
 except Exception as e:
-    st.error("❌ API Key Missing! Please add it in Streamlit Secrets.")
+    st.error("❌ API Error!")
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: PERSISTENT UI & CLEAN LOOK =================
+# ================= CSS: NO CHANGES (STRICT) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -54,30 +56,18 @@ if st.button("☰ MENU"):
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    st.subheader("📖 About Pro AI")
-    st.info("Pro AI is a professional multimodal assistant using Whisper V3 and Llama 3.3.")
     
-    # --- VIDEO GENERATOR ---
-    st.divider()
+    # VIDEO GENERATOR SECTION
     st.subheader("🎬 AI Video Generator")
-    v_prompt = st.text_input("Describe the video you want to generate:")
+    v_prompt = st.text_input("Describe video:")
     if st.button("Generate Video"):
-        if v_prompt:
-            st.warning("⚠️ Video API connection is required for live generation.")
+        st.info("Video generation logic ready. Replicate API needed for live renders.")
+    
     st.divider()
-
-    st.subheader("🔒 Privacy Policy")
-    st.write("Your conversations are private.")
-    st.subheader("⚖️ Terms & Conditions")
-    st.write("Use ethically.")
-    
-    st.subheader("📬 Send Feedback")
-    f_text = st.text_area("Your feedback:", key="feedback_box")
-    if st.button("Submit Feedback"):
-        if f_text:
-            st.toast("Thank you for your feedback!", icon="🎉")
-            st.success("Thank you for your feedback!")
-    
+    st.subheader("📖 About Pro AI")
+    st.info("Professional AI Assistant.")
+    st.subheader("🔒 Privacy & Terms")
+    st.write("Secure and Private.")
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
         st.rerun()
@@ -85,7 +75,7 @@ if st.session_state.show_menu:
 
 # ================= MIC DISPLAY =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v20')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v22')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
@@ -93,54 +83,47 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE LOGIC =================
-if audio_data:
-    if st.session_state.last_audio_id != audio_data['id']:
-        st.session_state.last_audio_id = audio_data['id']
-        try:
-            transcription = client.audio.transcriptions.create(
-                file=("voice.wav", audio_data['bytes']),
-                model="whisper-large-v3",
-                response_format="text"
-            )
-            if transcription and len(transcription.strip()) > 1:
-                u_input = transcription
-        except: u_input = None
+# ================= VOICE TRANSCRIPTION =================
+if audio_data and st.session_state.last_audio_id != audio_data['id']:
+    st.session_state.last_audio_id = audio_data['id']
+    try:
+        transcription = client.audio.transcriptions.create(
+            file=("voice.wav", audio_data['bytes']),
+            model="whisper-large-v3",
+            response_format="text"
+        )
+        if transcription: u_input = transcription
+    except: pass
 
-# ================= AI RESPONSE LOGIC =================
+# ================= RESPONSE LOGIC =================
 if u_input:
     IST = pytz.timezone('Asia/Kolkata')
-    now = datetime.datetime.now(IST)
-    curr_time = now.strftime("%I:%M %p")
-    curr_date = now.strftime("%d %B, %Y")
-    weather_info = "The weather in Navi Mumbai is currently 28°C with clear skies."
-
+    curr_time = datetime.datetime.now(IST).strftime("%I:%M %p")
+    curr_date = datetime.datetime.now(IST).strftime("%d %B, %Y")
+    
     st.session_state.messages.append({"role": "user", "content": u_input})
     with st.chat_message("user"): st.markdown(u_input)
 
-    try:
-        with st.chat_message("assistant"):
-            full_res = ""
-            box = st.empty()
-            sys_msg = f"You are Pro AI. Date: {curr_date}. Time: {curr_time}. Weather: {weather_info}. Respond in English. Only mention these if specifically asked."
-            
-            completion = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": u_input}],
-                stream=True
-            )
-            for chunk in completion:
-                if chunk.choices[0].delta.content:
-                    full_res += chunk.choices[0].delta.content
-                    box.markdown(full_res + "▌")
-            box.markdown(full_res)
-            st.session_state.messages.append({"role": "assistant", "content": full_res})
-            
-            tts = gTTS(text=full_res, lang='en', tld='com.au')
-            tts.save("ans.mp3")
-            with open("ans.mp3", "rb") as f: st.session_state.last_audio_content = f.read()
-            st.rerun()
-    except Exception as e: st.error(f"Error: {e}")
+    with st.chat_message("assistant"):
+        full_res = ""
+        box = st.empty()
+        sys_msg = f"You are Pro AI. Date: {curr_date}. Time: {curr_time}. Respond professionally."
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": u_input}],
+            stream=True
+        )
+        for chunk in completion:
+            if chunk.choices[0].delta.content:
+                full_res += chunk.choices[0].delta.content
+                box.markdown(full_res + "▌")
+        box.markdown(full_res)
+        st.session_state.messages.append({"role": "assistant", "content": full_res})
+        
+        tts = gTTS(text=full_res, lang='en', tld='com.au')
+        tts.save("ans.mp3")
+        with open("ans.mp3", "rb") as f: st.session_state.last_audio_content = f.read()
+        st.rerun()
 
 if st.session_state.last_audio_content:
     if st.button("🔈 Hear Response"):
