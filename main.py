@@ -6,9 +6,10 @@ import pytz
 import time
 from streamlit_mic_recorder import mic_recorder
 
-# ================= API SETUP =================
+# ================= API SETUP (NEW TOKEN) =================
 GROQ_KEY = "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"
-REPLICATE_TOKEN = "R8_IAbdjeQkoGq2XmgP9VBN11OpmC1qfAw1IVij9"
+# Bhai, aapka token yahan paste kar diya hai
+REPLICATE_TOKEN = "r8_IAbdjeQkoGq2XmgP9VBN11OpmC1qfAw1IVij9"
 
 try:
     client = Groq(api_key=GROQ_KEY)
@@ -17,35 +18,35 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= ADVANCED CSS (FIXED ALIGNMENT) =================
+# ================= UI CSS (PROFESSIONAL LOOK) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
     .block-container {padding-bottom: 120px; padding-top: 1rem;}
 
-    /* Chat Input Padding for Icons */
-    div[data-testid="stChatInput"] { padding-left: 90px !important; }
+    /* Input Box Padding */
+    div[data-testid="stChatInput"] { padding-left: 95px !important; }
 
-    /* Yellow Plus Icon - Inside Input Box Corner */
+    /* Yellow Plus Button Inside Input Area */
     .stFileUploader {
         position: fixed; bottom: 32px; left: 20px;
-        width: 38px !important; height: 38px !important; z-index: 2005;
+        width: 40px !important; height: 40px !important; z-index: 2005;
     }
     .stFileUploader section {
         background-color: #FFD700 !important; border-radius: 50% !important;
-        border: none !important; width: 38px !important; height: 38px !important;
-        min-height: 38px !important;
+        border: none !important; width: 40px !important; height: 40px !important;
+        min-height: 40px !important;
     }
     .stFileUploader label, .stFileUploader small { display: none !important; }
     .stFileUploader section::before {
-        content: '+'; color: black; font-size: 22px; font-weight: bold;
+        content: '+'; color: black; font-size: 24px; font-weight: bold;
         display: flex; justify-content: center; align-items: center; height: 100%;
     }
 
-    /* Mic Button - Perfectly Aligned */
+    /* Mic Button Aligned */
     .mic-wrap { position: fixed; bottom: 28px; left: 65px; z-index: 2006; }
-    .mic-wrap button { background-color: transparent !important; border: none !important; font-size: 20px !important; }
+    .mic-wrap button { background-color: transparent !important; border: none !important; font-size: 22px !important; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -55,9 +56,9 @@ if "messages" not in st.session_state: st.session_state.messages = []
 st.title("🚀 Pro AI")
 
 # Icons
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v4_plus")
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v6_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v4_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v6_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
 # Chat History
@@ -66,11 +67,14 @@ for m in st.session_state.messages:
 
 u_input = st.chat_input("Ask me or say 'Generate video of...'")
 
-# ================= FIXED VIDEO ENGINE =================
-def generate_video_stable(prompt):
-    headers = {"Authorization": f"Token {REPLICATE_TOKEN}", "Content-Type": "application/json"}
+# ================= VIDEO GENERATION ENGINE =================
+def generate_video_final(prompt):
+    headers = {
+        "Authorization": f"Token {REPLICATE_TOKEN}",
+        "Content-Type": "application/json"
+    }
     
-    # Using Luma Dream Machine (Very stable for text-to-video)
+    # Using a very stable model (Stable Video Diffusion or Luma)
     payload = {
         "version": "a71f032252c416187766b1e6b52c3c662e0868f00d235c249495c2e9b980e03e",
         "input": {"prompt": prompt}
@@ -78,24 +82,26 @@ def generate_video_stable(prompt):
     
     try:
         response = requests.post("https://api.replicate.com/v1/predictions", json=payload, headers=headers)
-        data = response.json()
         
-        # Check if 'urls' exists in response
+        if response.status_code == 401:
+            return "❌ Token Error: Please ensure your Replicate Token is active and correct."
+        
+        data = response.json()
         if "urls" in data:
             poll_url = data["urls"]["get"]
-            with st.status("🎬 AI is rendering your video... (60s)", expanded=True) as s:
+            with st.status("🎬 AI is making your video... (Wait ~60s)", expanded=True) as s:
                 while True:
-                    result = requests.get(poll_url, headers=headers).json()
-                    if result["status"] == "succeeded":
-                        s.update(label="✅ Video Ready!", state="complete")
-                        return result["output"]
-                    elif result["status"] == "failed":
-                        return f"❌ Failed: {result.get('error', 'Unknown error')}"
+                    res = requests.get(poll_url, headers=headers).json()
+                    if res["status"] == "succeeded":
+                        s.update(label="✅ Done!", state="complete")
+                        return res["output"]
+                    elif res["status"] == "failed":
+                        return f"❌ Failed: {res.get('error')}"
                     time.sleep(5)
         else:
-            return f"❌ API Error: {data.get('detail', 'Check API Token or Credits')}"
+            return f"❌ API Error: {data.get('detail', 'Authentication failed or insufficient credits')}"
     except Exception as e:
-        return f"❌ Connection Error: {str(e)}"
+        return f"❌ System Error: {str(e)}"
 
 # ================= PROCESS INPUT =================
 if u_input:
@@ -104,12 +110,12 @@ if u_input:
 
     # VIDEO CHECK
     if any(x in u_input.lower() for x in ["video", "banao", "generate"]):
-        video_url = generate_video_stable(u_input)
-        if "http" in str(video_url):
-            st.video(video_url)
-            st.session_state.messages.append({"role": "assistant", "content": "Generated Video."})
+        v_url = generate_video_final(u_input)
+        if "http" in str(v_url):
+            st.video(v_url)
+            st.session_state.messages.append({"role": "assistant", "content": "Video generated successfully!"})
         else:
-            st.error(video_url)
+            st.error(v_url)
     else:
         # NORMAL CHAT
         with st.chat_message("assistant"):
