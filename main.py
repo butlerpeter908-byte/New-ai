@@ -18,108 +18,86 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= ADVANCED CSS (YELLOW THEME & FUNCTIONAL PLUS) =================
+# ================= FIXED CSS (ALIGNED UI) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
     #MainMenu {visibility: hidden;}
-    .block-container {padding-bottom: 120px; padding-top: 2rem;}
+    .block-container {padding-bottom: 100px; padding-top: 1rem;}
 
-    /* Chat Input Adjustments */
+    /* Input Container Fix */
     div[data-testid="stChatInput"] { 
-        margin-left: 110px !important; 
-        z-index: 1000; 
+        padding-left: 95px !important; 
+        z-index: 1000;
     }
 
-    /* Professional Yellow Plus Icon Logic */
+    /* Fixed Yellow Plus Button - Inside/Beside Input */
     .stFileUploader {
         position: fixed;
-        bottom: 35px;
-        left: 20px;
-        width: 45px;
-        height: 45px;
+        bottom: 30px;
+        left: 15px;
+        width: 40px !important;
+        height: 40px !important;
         z-index: 2005;
-        overflow: hidden;
     }
     
-    /* Making the uploader look like a Yellow Plus Button */
     .stFileUploader section {
-        padding: 0 !important;
-        background-color: #FFD700 !important; /* Gold/Yellow Theme */
+        background-color: #FFD700 !important;
         border-radius: 50% !important;
-        border: 2px solid #000 !important;
-        width: 45px !important;
-        height: 45px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
+        border: none !important;
+        width: 40px !important;
+        height: 40px !important;
+        min-height: 40px !important;
     }
 
-    /* Hide the default text of uploader */
-    .stFileUploader label, .stFileUploader small { display: none !important; }
-    .stFileUploader section > div { display: none !important; }
-    
-    /* Custom '+' symbol inside yellow circle */
+    .stFileUploader label, .stFileUploader small, .stFileUploader div[data-testid="stMarkdownContainer"] { display: none !important; }
     .stFileUploader section::before {
         content: '+';
         color: black;
-        font-size: 30px;
+        font-size: 24px;
         font-weight: bold;
-        line-height: 45px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
     }
 
-    /* Mic Position */
+    /* Mic Button - Perfectly Aligned */
     .mic-wrap {
         position: fixed;
-        bottom: 30px;
-        left: 75px;
-        z-index: 2001;
+        bottom: 25px;
+        left: 62px;
+        z-index: 2006;
     }
     
     .mic-wrap button {
         background-color: transparent !important;
         border: none !important;
-        font-size: 24px !important;
+        font-size: 22px !important;
     }
 
-    .menu-card { background-color: #121212; padding: 20px; border-radius: 12px; border: 1px solid #FFD700; margin-bottom: 20px; }
+    .menu-card { background-color: #121212; padding: 15px; border-radius: 12px; border: 1px solid #FFD700; margin-bottom: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= SESSION STATE =================
+# ================= COMPONENTS =================
 if "messages" not in st.session_state: st.session_state.messages = []
 if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
 if "last_audio_content" not in st.session_state: st.session_state.last_audio_content = None
-if "show_menu" not in st.session_state: st.session_state.show_menu = False
 
 st.title("🚀 Pro AI")
 
-# ================= FUNCTIONAL COMPONENTS =================
+# Working Yellow Plus Icon
+uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "mp4"], key="plus_v26")
 
-# 1. Plus Icon (Yellow & Working)
-uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "mp4"], key="plus_uploader")
-
-# 2. Mic Icon
+# Mic Icon
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='pro_mic_v25')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='fixed_mic_pro')
 st.markdown('</div>', unsafe_allow_html=True)
 
-# File logic
 if uploaded_file:
-    st.toast(f"✅ File Ready: {uploaded_file.name}", icon="📁")
-
-# ================= MENU =================
-if st.button("☰ MENU"):
-    st.session_state.show_menu = not st.session_state.show_menu
-
-if st.session_state.show_menu:
-    st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    st.subheader("🎬 Video Generator")
-    if st.button("🗑️ Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.toast(f"📎 Attached: {uploaded_file.name}")
 
 # ================= CHAT DISPLAY =================
 for m in st.session_state.messages:
@@ -146,7 +124,7 @@ if u_input:
     with st.chat_message("assistant"):
         full_res = ""
         box = st.empty()
-        sys_msg = "You are Pro AI, a helpful and professional assistant."
+        sys_msg = "You are Pro AI, a professional assistant."
         completion = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": u_input}],
