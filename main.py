@@ -42,66 +42,65 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= STABLE VIDEO ENGINE =================
-def generate_free_video(prompt):
-    # Sabse stable models ka naya order
-    models = [
-        "ali-vilab/modelscope-damo-text-to-video-dynamics",
-        "guoyww/AnimateDiff",
-        "strangerzonehf/Animov-0.1"
-    ]
-    
+# ================= STABLE GENERATION TOOLS =================
+def generate_content(prompt, is_video=True):
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+    
+    # Fast Image Model if video fails
+    IMG_URL = "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-xl-base-1.0"
+    # Current best video model
+    VID_URL = "https://api-inference.huggingface.co/models/ali-vilab/modelscope-damo-text-to-video-dynamics"
 
-    for model_name in models:
-        API_URL = f"https://api-inference.huggingface.co/models/{model_name}"
-        try:
-            with st.status(f"🚀 Connecting to: {model_name.split('/')[-1]}...", expanded=True) as s:
-                # Prompt ko clean karna
-                payload = {"inputs": prompt, "parameters": {"num_frames": 16}}
-                response = requests.post(API_URL, headers=headers, json=payload, timeout=120)
+    target_url = VID_URL if is_video else IMG_URL
+    label = "🎬 Rendering Video..." if is_video else "🖼️ Generating Image..."
+
+    try:
+        with st.status(label, expanded=True) as s:
+            response = requests.post(target_url, headers=headers, json={"inputs": prompt}, timeout=120)
+            
+            if response.status_code == 200:
+                s.update(label="✅ Ready!", state="complete")
+                return response.content
+            elif response.status_code == 503:
+                s.write("⏳ AI is warming up... Retrying in 10s")
+                time.sleep(10)
+                response = requests.post(target_url, headers=headers, json={"inputs": prompt})
+                if response.status_code == 200: return response.content
                 
-                if response.status_code == 200:
-                    s.update(label="✅ Video Ready!", state="complete")
-                    return response.content
-                elif response.status_code == 503:
-                    s.write("⏳ Model is starting up (Cold Start)... Waiting 20s")
-                    time.sleep(20)
-                    response = requests.post(API_URL, headers=headers, json=payload)
-                    if response.status_code == 200: return response.content
-                
-                s.write(f"⚠️ {model_name.split('/')[-1]} is under heavy load, switching...")
-                continue
-        except:
-            continue
+            return f"⚠️ Server Busy (Error {response.status_code}). Try again in 1 min."
+    except:
+        return "❌ Connection Lost."
 
-    return "❌ Servers are very busy. Pro Tip: Try a shorter prompt or wait 2 minutes."
-
-# ================= APP LOGIC =================
+# ================= MAIN APP =================
 if "messages" not in st.session_state: st.session_state.messages = []
 st.title("🚀 Pro AI")
 
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v_pro_fix")
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v_mega")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='mic_pro_fix')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='mic_mega')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Ask me or 'Generate video of...'")
+u_input = st.chat_input("Ask me anything or generate media...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
     with st.chat_message("user"): st.markdown(u_input)
 
-    if any(x in u_input.lower() for x in ["video", "banao", "generate"]):
-        video_data = generate_free_video(u_input)
-        if isinstance(video_data, bytes):
-            st.video(video_data)
-        else:
-            st.warning(video_data)
+    # Logic for Video or Image
+    low_input = u_input.lower()
+    if "video" in low_input:
+        res = generate_content(u_input, is_video=True)
+        if isinstance(res, bytes): st.video(res)
+        else: st.warning(res)
+    elif any(x in low_input for x in ["photo", "image", "picture", "banao"]):
+        res = generate_content(u_input, is_video=False)
+        if isinstance(res, bytes): st.image(res)
+        else: st.warning(res)
     else:
+        # Smart Chat
         with st.chat_message("assistant"):
             full_res = ""
             box = st.empty()
@@ -116,4 +115,4 @@ if u_input:
                     box.markdown(full_res + "▌")
             box.markdown(full_res)
             st.session_state.messages.append({"role": "assistant", "content": full_res})
-            
+    
