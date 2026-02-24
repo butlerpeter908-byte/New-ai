@@ -15,7 +15,7 @@ except Exception as e:
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= UI CSS (GEMINI LOOK) =================
+# ================= UI CSS =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -42,46 +42,53 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= NEW STABLE FREE VIDEO ENGINE =================
+# ================= MULTI-MODEL VIDEO ENGINE =================
 def generate_free_video(prompt):
-    # Using VideoCrafter - A more stable free model on HF
-    API_URL = "https://api-inference.huggingface.co/models/VideoCrafter/VideoCrafter2"
+    # Models ki list jo hum try karenge
+    models = [
+        "LanguageBind/Video-LLaVA-7B", # Pehla option
+        "vdo/zeroscope_v2_576w",        # Dusra option
+        "ByteDance/AnimateDiff"         # Teesra option
+    ]
+    
     headers = {"Authorization": f"Bearer {HF_TOKEN}"}
 
-    try:
-        with st.status("🎬 AI is rendering your video (Free Mode)...", expanded=True) as s:
-            response = requests.post(API_URL, headers=headers, json={"inputs": prompt}, timeout=60)
-            
-            # 503 means model is loading
-            if response.status_code == 503:
-                s.write("⏳ AI Model is waking up... waiting 30 seconds.")
-                time.sleep(30)
-                response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
+    for model_name in models:
+        API_URL = f"https://api-inference.huggingface.co/models/{model_name}"
+        try:
+            with st.status(f"🎬 Trying model: {model_name.split('/')[-1]}...", expanded=True) as s:
+                response = requests.post(API_URL, headers=headers, json={"inputs": prompt}, timeout=120)
+                
+                if response.status_code == 200:
+                    s.update(label="✅ Video Ready!", state="complete")
+                    return response.content
+                elif response.status_code == 503:
+                    s.write("⏳ AI is warming up... wait 15s")
+                    time.sleep(15)
+                    # Retry once
+                    response = requests.post(API_URL, headers=headers, json={"inputs": prompt})
+                    if response.status_code == 200: return response.content
+                
+                s.write(f"⚠️ Model {model_name.split('/')[-1]} busy, switching...")
+                continue # Next model par jao
+        except:
+            continue
 
-            if response.status_code == 200:
-                s.update(label="✅ Video Ready!", state="complete")
-                return response.content 
-            elif response.status_code == 403:
-                return "❌ Token Error: Please make sure your token has 'Inference' permissions enabled in HF settings."
-            else:
-                # If VideoCrafter fails, let's try a fallback model
-                return f"❌ Model Busy (Error {response.status_code}). Please try again in a minute."
-    except Exception as e:
-        return f"❌ System Error: {str(e)}"
+    return "❌ All free models are busy right now. Please try again in 2 minutes."
 
 # ================= APP LOGIC =================
 if "messages" not in st.session_state: st.session_state.messages = []
 st.title("🚀 Pro AI")
 
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v_final_plus")
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v_ultimate")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v_final_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='mic_ultimate')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Generate a video of...")
+u_input = st.chat_input("Say 'Generate video of a flying dragon'...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
