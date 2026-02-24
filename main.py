@@ -8,18 +8,18 @@ import datetime
 import pytz 
 from streamlit_mic_recorder import mic_recorder
 
-# ================= API SETUP (KEY ADDED) =================
-# Bhai maine yaha direct key daal di hai jaisa aapne bola
-GROQ_KEY = "Gsk_GK1bMjDYUnY5xqJDKz1wWGdyb3FYfNu0ba9Yidoj09n83dt6LD6e"
+# ================= API SETUP (KEY INTEGRATED) =================
+# Bhai, maine aapki key yahan paste kar di hai
+GROQ_KEY = "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"
 
 try:
     client = Groq(api_key=GROQ_KEY)
 except Exception as e:
-    st.error("❌ API Error!")
+    st.error("❌ API Error! Please check your key.")
 
 st.set_page_config(page_title="Pro AI", layout="wide")
 
-# ================= CSS: NO CHANGES (STRICT) =================
+# ================= CSS: PLUS ICON, MIC & UI FIXES =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -27,10 +27,24 @@ st.markdown("""
     #MainMenu {visibility: hidden;}
     .block-container {padding-bottom: 160px; padding-top: 2rem;}
     hr {border: none !important; display: none !important;}
-    div.stChatFloatingInputContainer {border: none !important; box-shadow: none !important;}
-    div[data-testid="stChatInput"] { margin-left: 65px !important; z-index: 1000; border: none !important; }
     
-    .mic-fixed-container { position: fixed; bottom: 10px; left: 15px; z-index: 9999 !important; }
+    /* Plus Icon Styling */
+    .plus-container {
+        position: fixed;
+        bottom: 58px;
+        left: 80px;
+        z-index: 1001;
+    }
+    
+    /* Chat Input Adjustments for Plus Icon */
+    div[data-testid="stChatInput"] { 
+        margin-left: 100px !important; 
+        z-index: 1000; 
+        border: none !important; 
+    }
+
+    /* Mic Position Adjustment */
+    .mic-fixed-container { position: fixed; bottom: 53px; left: 15px; z-index: 9999 !important; }
     .mic-fixed-container button {
         background-color: #FF4B4B !important;
         border-radius: 50% !important;
@@ -38,6 +52,7 @@ st.markdown("""
         border: 2px solid white !important;
         box-shadow: 0px 4px 15px rgba(0,0,0,0.5) !important;
     }
+
     .menu-card { background-color: #121212; padding: 25px; border-radius: 15px; border: 1px solid #FF4B4B; margin-bottom: 20px; }
     </style>
 """, unsafe_allow_html=True)
@@ -56,34 +71,38 @@ if st.button("☰ MENU"):
 
 if st.session_state.show_menu:
     st.markdown('<div class="menu-card">', unsafe_allow_html=True)
-    
-    # VIDEO GENERATOR SECTION
     st.subheader("🎬 AI Video Generator")
     v_prompt = st.text_input("Describe video:")
     if st.button("Generate Video"):
-        st.info("Video generation logic ready. Replicate API needed for live renders.")
-    
+        st.info("Video generation logic is ready for integration.")
     st.divider()
     st.subheader("📖 About Pro AI")
-    st.info("Professional AI Assistant.")
-    st.subheader("🔒 Privacy & Terms")
-    st.write("Secure and Private.")
+    st.info("Professional Multimodal AI Assistant.")
     if st.button("🗑️ Clear Conversation"):
         st.session_state.messages = []
         st.rerun()
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ================= MIC DISPLAY =================
+# ================= PLUS ICON & MIC =================
 st.markdown('<div class="mic-fixed-container">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v22')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="🌊", key='final_verified_mic_v24')
 st.markdown('</div>', unsafe_allow_html=True)
+
+# Plus Icon for uploads
+with st.container():
+    st.markdown('<div class="plus-container">', unsafe_allow_html=True)
+    uploaded_file = st.file_uploader(" ", type=["png", "jpg", "jpeg", "mp4"], label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+if uploaded_file:
+    st.toast(f"File uploaded: {uploaded_file.name}", icon="📎")
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
 u_input = st.chat_input("Ask me anything...")
 
-# ================= VOICE TRANSCRIPTION =================
+# ================= VOICE & RESPONSE LOGIC =================
 if audio_data and st.session_state.last_audio_id != audio_data['id']:
     st.session_state.last_audio_id = audio_data['id']
     try:
@@ -95,7 +114,6 @@ if audio_data and st.session_state.last_audio_id != audio_data['id']:
         if transcription: u_input = transcription
     except: pass
 
-# ================= RESPONSE LOGIC =================
 if u_input:
     IST = pytz.timezone('Asia/Kolkata')
     curr_time = datetime.datetime.now(IST).strftime("%I:%M %p")
