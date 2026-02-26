@@ -13,12 +13,12 @@ PEXELS_API_KEY = "KepM3s6J4wl9TaIjAFuso1aU2wJStlw06hKNACJnRbYmh831W0r01rmi"
 
 try:
     client = Groq(api_key=GROQ_KEY)
-except Exception as e:
-    st.error("❌ Groq Error!")
+except:
+    st.error("Groq Connection Error!")
 
-st.set_page_config(page_title="Pro AI Ultra", layout="wide")
+st.set_page_config(page_title="Pro AI Final", layout="wide")
 
-# ================= FULL UI CSS =================
+# ================= UI CSS (All Buttons) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -45,81 +45,79 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= UTILITY FUNCTIONS =================
+# ================= CORE FUNCTIONS =================
 
-def get_weather(city="Delhi"):
-    # Weather ke liye ek free API call (demo purposes)
-    return f"Bhai, {city} mein mausam ekdam mast hai, lagbhag 25°C temperature hai."
-
-def text_to_speech_autoplay(text):
+def speak(text):
+    """Voice generator and autoplay"""
     try:
         tts = gTTS(text=text, lang='hi', slow=False)
-        tts.save("speech.mp3")
-        with open("speech.mp3", "rb") as f:
+        tts.save("msg.mp3")
+        with open("msg.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
             md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay></audio>'
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
-def get_pexels_video(query):
+def get_video(query):
+    """Relatable video from Pexels"""
     headers = {"Authorization": PEXELS_API_KEY}
-    url = f"https://api.pexels.com/videos/search?query={query}&per_page=3"
+    url = f"https://api.pexels.com/videos/search?query={query}&per_page=1"
     try:
         r = requests.get(url, headers=headers).json()
-        return random.choice(r['videos'])['video_files'][0]['link']
+        return r['videos'][0]['video_files'][0]['link']
     except: return None
 
 # ================= MAIN APP =================
 if "messages" not in st.session_state: st.session_state.messages = []
 
-st.title("🚀 Pro AI Ultra")
+st.title("🚀 Pro AI Ultra v4")
 
-# Menu Buttons
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="ultra_plus")
+# Buttons (Plus, Mic)
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v4_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='ultra_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v4_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Time, Weather ya Video... kuch bhi pucho!")
+u_input = st.chat_input("Pucho: Time kya hai? ya Video dikhao...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
     with st.chat_message("user"): st.markdown(u_input)
     
-    low_input = u_input.lower()
-    final_reply = ""
+    txt = u_input.lower()
+    reply = ""
 
     with st.chat_message("assistant"):
-        # 🕒 1. Check for TIME
-        if "time" in low_input or "samay" in low_input:
-            final_reply = f"Abhi ka samay hai: {datetime.now().strftime('%I:%M %p')}"
-            st.write(final_reply)
+        # 1. TIME LOGIC
+        if "time" in txt or "samay" in txt or "waqt" in txt:
+            reply = f"Bhai, abhi ka sahi samay hai: {datetime.now().strftime('%I:%M %p')}"
         
-        # 🌤️ 2. Check for WEATHER
-        elif "weather" in low_input or "mausam" in low_input:
-            final_reply = get_weather()
-            st.write(final_reply)
+        # 2. WEATHER LOGIC
+        elif "weather" in txt or "mausam" in txt:
+            reply = "Bhai, mausam ekdam suhana hai, bahar ghoomne layak din hai!"
+            
+        # 3. VIDEO LOGIC (Trigger only if specifically asked)
+        elif "video" in txt or "dikhao" in txt:
+            q = txt.replace("video","").replace("dikhao","").strip()
+            v_url = get_video(q if q else "nature")
+            if v_url: st.video(v_url, loop=True)
+            reply = f"Ye rahi aapki {q} ki video!"
 
-        # 🧠 3. General AI Chat
+        # 4. CHAT LOGIC (General)
         else:
-            completion = client.chat.completions.create(
+            res = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
                 messages=[{"role": "user", "content": u_input}]
             )
-            final_reply = completion.choices[0].message.content
-            st.write(final_reply)
+            reply = res.choices[0].message.content
+        
+        # Show Reply & Speak
+        st.write(reply)
+        speak(reply)
 
-        # 🎙️ Voice Sync
-        text_to_speech_autoplay(final_reply)
-
-        # 🎬 Video Logic
-        if any(x in low_input for x in ["video", "show", "car", "nature"]):
-            v_url = get_pexels_video(low_input.replace("video","").strip())
-            if v_url: st.video(v_url, loop=True)
-
-    st.session_state.messages.append({"role": "assistant", "content": final_reply})
+    st.session_state.messages.append({"role": "assistant", "content": reply})
     
