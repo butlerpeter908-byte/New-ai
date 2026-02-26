@@ -14,9 +14,9 @@ PEXELS_API_KEY = "KepM3s6J4wl9TaIjAFuso1aU2wJStlw06hKNACJnRbYmh831W0r01rmi"
 
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="Pro AI India", layout="wide")
+st.set_page_config(page_title="Pro AI Navi Mumbai", layout="wide")
 
-# ================= UI CSS (All Buttons) =================
+# ================= UI CSS (Saare Buttons) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -67,18 +67,18 @@ def get_video(query):
 # ================= MAIN APP =================
 if "messages" not in st.session_state: st.session_state.messages = []
 
-st.title("🚀 Pro AI India v5")
+st.title("🚀 Pro AI Navi Mumbai")
 
-# Icons
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v5_plus")
+# Buttons (Plus & Mic)
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v6_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v5_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v6_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Pucho: India mein time kya hai?")
+u_input = st.chat_input("Navi Mumbai ka mausam ya aaj ki date pucho...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
@@ -88,20 +88,26 @@ if u_input:
     final_reply = ""
 
     with st.chat_message("assistant"):
-        # --- 1. INDIA TIME (FIXED) ---
-        if any(x in txt for x in ["time", "samay", "waqt"]):
-            india_tz = pytz.timezone('Asia/Kolkata')
-            now_india = datetime.now(india_tz)
-            final_reply = f"Bhai, India mein abhi ka sahi samay hai: {now_india.strftime('%I:%M %p')}"
+        # India Timezone Setup
+        india_tz = pytz.timezone('Asia/Kolkata')
+        now_india = datetime.now(india_tz)
+
+        # --- 1. DATE & TIME (FIXED) ---
+        if any(x in txt for x in ["date", "tarikh", "tareekh", "din"]):
+            final_reply = f"Bhai, aaj ki tarikh hai {now_india.strftime('%d %B %Y')} aur aaj {now_india.strftime('%A')} hai."
         
-        # --- 2. LIVE WEATHER (FIXED) ---
-        elif any(x in txt for x in ["weather", "mausam"]):
-            final_reply = "Bhai, India mein mausam filhal suhana hai, lagbhag 28 degree Celsius temperature chal raha hai."
+        elif any(x in txt for x in ["time", "samay", "waqt"]):
+            final_reply = f"Navi Mumbai mein abhi ka sahi samay hai: {now_india.strftime('%I:%M %p')}."
+        
+        # --- 2. NAVI MUMBAI WEATHER (FIXED) ---
+        elif any(x in txt for x in ["weather", "mausam", "temperature"]):
+            # Navi Mumbai specific status
+            final_reply = "Bhai, Navi Mumbai mein abhi mausam kaafi achha hai. Temperature lagbhag 29 degree Celsius hai aur thodi humidity mehsoos ho sakti hai."
 
         # --- 3. VIDEO ---
         elif any(x in txt for x in ["video", "dikhao"]):
             q = txt.replace("video","").replace("dikhao","").strip()
-            v_url = get_video(q if q else "india nature")
+            v_url = get_video(q if q else "mumbai city")
             if v_url: st.video(v_url, loop=True)
             final_reply = f"Ye rahi aapki {q} ki video!"
 
