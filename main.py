@@ -16,9 +16,9 @@ try:
 except:
     st.error("Groq Connection Error!")
 
-st.set_page_config(page_title="Pro AI Final", layout="wide")
+st.set_page_config(page_title="Pro AI Ultra Fix", layout="wide")
 
-# ================= UI CSS (All Buttons) =================
+# ================= UI CSS (All Buttons & Dark Theme) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -55,7 +55,7 @@ def speak(text):
         with open("msg.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
-            md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay></audio>'
+            md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>'
             st.markdown(md, unsafe_allow_html=True)
     except: pass
 
@@ -65,59 +65,69 @@ def get_video(query):
     url = f"https://api.pexels.com/videos/search?query={query}&per_page=1"
     try:
         r = requests.get(url, headers=headers).json()
-        return r['videos'][0]['video_files'][0]['link']
+        if r['videos']:
+            return r['videos'][0]['video_files'][0]['link']
     except: return None
+    return None
 
 # ================= MAIN APP =================
-if "messages" not in st.session_state: st.session_state.messages = []
+if "messages" not in st.session_state: 
+    st.session_state.messages = []
 
-st.title("🚀 Pro AI Ultra v4")
+st.title("🚀 Pro AI Ultra Fix")
 
-# Buttons (Plus, Mic)
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v4_plus")
+# Icons Setup (Plus & Mic)
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="fixed_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v4_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='fixed_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
+# History Display
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Pucho: Time kya hai? ya Video dikhao...")
+u_input = st.chat_input("Pucho: 'Time kya hai?' ya 'Car ki video dikhao'...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
     with st.chat_message("user"): st.markdown(u_input)
     
     txt = u_input.lower()
-    reply = ""
+    final_reply = ""
 
     with st.chat_message("assistant"):
-        # 1. TIME LOGIC
-        if "time" in txt or "samay" in txt or "waqt" in txt:
-            reply = f"Bhai, abhi ka sahi samay hai: {datetime.now().strftime('%I:%M %p')}"
+        # --- 1. PRIORITY: TIME CHECK ---
+        if any(x in txt for x in ["time", "samay", "waqt"]):
+            final_reply = f"Bhai, abhi ka sahi samay hai: {datetime.now().strftime('%I:%M %p')}"
         
-        # 2. WEATHER LOGIC
-        elif "weather" in txt or "mausam" in txt:
-            reply = "Bhai, mausam ekdam suhana hai, bahar ghoomne layak din hai!"
-            
-        # 3. VIDEO LOGIC (Trigger only if specifically asked)
-        elif "video" in txt or "dikhao" in txt:
-            q = txt.replace("video","").replace("dikhao","").strip()
+        # --- 2. PRIORITY: WEATHER CHECK ---
+        elif any(x in txt for x in ["weather", "mausam", "temperature"]):
+            final_reply = "Bhai, mausam ekdam mast hai, lagbhag 24°C temperature hai aur thandi hawa chal rahi hai!"
+
+        # --- 3. PRIORITY: VIDEO CHECK ---
+        elif any(x in txt for x in ["video", "dikhao", "show"]):
+            q = txt.replace("video","").replace("dikhao","").replace("show","").strip()
             v_url = get_video(q if q else "nature")
-            if v_url: st.video(v_url, loop=True)
-            reply = f"Ye rahi aapki {q} ki video!"
+            if v_url:
+                st.video(v_url, loop=True)
+                final_reply = f"Ye rahi aapki {q} ki video!"
+            else:
+                final_reply = "Sorry bhai, is topic par video nahi mili, par main bol raha hoon!"
 
-        # 4. CHAT LOGIC (General)
+        # --- 4. DEFAULT: CHAT WITH GROQ ---
         else:
-            res = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": u_input}]
-            )
-            reply = res.choices[0].message.content
-        
-        # Show Reply & Speak
-        st.write(reply)
-        speak(reply)
+            try:
+                res = client.chat.completions.create(
+                    model="llama-3.3-70b-versatile",
+                    messages=[{"role": "user", "content": u_input}]
+                )
+                final_reply = res.choices[0].message.content
+            except:
+                final_reply = "Sorry bhai, Groq thoda busy hai, baad mein try karo."
 
-    st.session_state.messages.append({"role": "assistant", "content": reply})
+        # Show Text and Start Voice Autoplay
+        st.write(final_reply)
+        speak(final_reply)
+
+    st.session_state.messages.append({"role": "assistant", "content": final_reply})
     
