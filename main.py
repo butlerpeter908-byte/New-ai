@@ -10,11 +10,14 @@ from streamlit_mic_recorder import mic_recorder
 
 # ================= API SETUP =================
 GROQ_KEY = "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"
+# Aapki Pollinations API Key yahan paste kar di hai
+POLLINATIONS_KEY = "sk_GDjUvkvbbvb1sh8DNRObVhIuaB3x3wsD"
+
 client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Pro Generative AI", layout="wide")
 
-# ================= UI CSS =================
+# ================= MODERN UI CSS =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -22,22 +25,33 @@ st.markdown("""
     .block-container {padding-bottom: 150px; background-color: #0E1117;}
     div[data-testid="stChatInput"] { padding-left: 95px !important; }
     
+    /* Plus Button Style */
     .stFileUploader {
         position: fixed; bottom: 32px; left: 20px;
         width: 40px !important; height: 40px !important; z-index: 2005;
     }
     .stFileUploader section {
         background-color: #FFD700 !important; border-radius: 50% !important;
-        width: 40px !important; height: 40px !important;
+        border: none !important; width: 40px !important; height: 40px !important;
     }
+    .stFileUploader section::before {
+        content: '+'; color: black; font-size: 24px; font-weight: bold;
+        display: flex; justify-content: center; align-items: center; height: 100%;
+    }
+
+    /* Mic Button Style */
     .mic-wrap { position: fixed; bottom: 28px; left: 65px; z-index: 2006; }
     .mic-wrap button { background-color: transparent !important; border: none !important; }
+    
+    /* Settings Box */
+    .settings-box { background: #1E1E1E; padding: 10px; border-radius: 10px; border: 1px solid #FFD700; margin-bottom: 10px; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= FUNCTIONS =================
+# ================= CORE FUNCTIONS =================
 
 def speak(text):
+    """Hindi/English Voice Autoplay"""
     try:
         tts = gTTS(text=text, lang='hi', slow=False)
         tts.save("msg.mp3")
@@ -48,34 +62,35 @@ def speak(text):
     except: pass
 
 def generate_ai_video(prompt, width, height):
-    """Real AI Video Generation (Pollinations)"""
-    seed = random.randint(1, 99999)
-    clean_p = prompt.replace(" ", "%20")
-    # Ye URL naya video generate karta hai, purana uthata nahi
-    v_url = f"https://pollinations.ai/p/{clean_p}?width={width}&height={height}&seed={seed}&model=video"
+    """Real Generative Video using Pollinations API"""
+    seed = random.randint(1, 999999)
+    clean_prompt = prompt.replace(" ", "%20")
+    # Pollinations generative model
+    v_url = f"https://pollinations.ai/p/{clean_prompt}?width={width}&height={height}&seed={seed}&model=video"
     return v_url
 
-# ================= MAIN APP =================
+# ================= MAIN APP FLOW =================
 if "messages" not in st.session_state: st.session_state.messages = []
 
-st.title("🤖 Real Generative AI")
+st.title("🤖 Pro Generative AI")
 
-# --- SETTINGS FOR DOWNLOAD SIZE ---
-with st.expander("⚙️ Video Settings (Size Select)"):
-    size_option = st.selectbox("Download Size Chunien:", ["Mobile (Vertical)", "Desktop (Widescreen)", "Square"])
-    dim = {"Mobile (Vertical)": (720, 1280), "Desktop (Widescreen)": (1280, 720), "Square": (1024, 1024)}
-    w, h = dim[size_option]
+# --- VIDEO SIZE SETTINGS ---
+with st.expander("🎬 Video Size & Format Settings"):
+    size_choice = st.radio("Download Format Chunien:", ["Mobile (9:16)", "Desktop (16:9)", "Square (1:1)"], horizontal=True)
+    dim_map = {"Mobile (9:16)": (720, 1280), "Desktop (16:9)": (1280, 720), "Square (1:1)": (1024, 1024)}
+    target_w, target_h = dim_map[size_choice]
 
-# Buttons
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="gen_plus")
+# Sidebar Icons
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="ultra_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='gen_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='ultra_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
+# Show History
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Prompt: 'A glowing futuristic car driving in Navi Mumbai'...")
+u_input = st.chat_input("Prompt: 'Cyberpunk Navi Mumbai street in rain'")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
@@ -88,22 +103,25 @@ if u_input:
         india_tz = pytz.timezone('Asia/Kolkata')
         now_india = datetime.now(india_tz)
 
-        # 1. TIME/DATE/WEATHER LOGIC
-        if any(x in txt for x in ["date", "time", "weather"]):
-            if "date" in txt: final_reply = f"Aaj ki tarikh: {now_india.strftime('%d %B %Y')}"
-            elif "time" in txt: final_reply = f"Time: {now_india.strftime('%I:%M %p')}"
-            else: final_reply = "Navi Mumbai ka mausam mast 29°C hai!"
+        # 🕒 1. DATE, TIME, WEATHER (INDIA/NAVI MUMBAI)
+        if any(x in txt for x in ["date", "time", "weather", "tarikh", "mausam"]):
+            if "date" in txt or "tarikh" in txt:
+                final_reply = f"Bhai, aaj ki tarikh hai {now_india.strftime('%d %B %Y')}."
+            elif "time" in txt or "samay" in txt:
+                final_reply = f"Navi Mumbai mein abhi ka samay hai: {now_india.strftime('%I:%M %p')}."
+            else:
+                final_reply = "Bhai, Navi Mumbai ka mausam filhal ekdam mast hai, temperature 29°C ke aas-paas hai."
         
-        # 2. REAL VIDEO GENERATION (NOT SEARCH)
+        # 🎬 2. REAL GENERATIVE VIDEO
         elif any(x in txt for x in ["video", "generate", "banao"]):
-            with st.spinner("🧠 AI is creating a NEW video for you..."):
-                v_url = generate_ai_video(u_input, w, h)
-                st.video(v_url)
-                # Download link
-                st.markdown(f'[📥 Download {size_option} Video]({v_url})')
-                final_reply = f"Bhai, maine aapke liye ek nayi {size_option} video generate ki hai!"
+            with st.spinner("✨ AI is dreaming your video..."):
+                video_url = generate_ai_video(u_input, target_w, target_h)
+                st.video(video_url)
+                # Download Button with specific size info
+                st.markdown(f"### [📥 Click to Download {size_choice} Video]({video_url})")
+                final_reply = f"Bhai, maine aapki command par ek nayi {size_choice} video generate kar di hai. Aap ise niche link se download kar sakte ho."
 
-        # 3. CHAT
+        # 🧠 3. CHAT LOGIC
         else:
             res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": u_input}])
             final_reply = res.choices[0].message.content
@@ -112,4 +130,3 @@ if u_input:
         speak(final_reply)
 
     st.session_state.messages.append({"role": "assistant", "content": final_reply})
-    
