@@ -5,23 +5,21 @@ import random
 from gtts import gTTS
 import base64
 from datetime import datetime
-import pytz # India Timezone ke liye
+import pytz
 from streamlit_mic_recorder import mic_recorder
 
 # ================= API SETUP =================
 GROQ_KEY = "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"
-PEXELS_API_KEY = "KepM3s6J4wl9TaIjAFuso1aU2wJStlw06hKNACJnRbYmh831W0r01rmi"
-
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="Pro AI Navi Mumbai", layout="wide")
+st.set_page_config(page_title="Pro Generative AI", layout="wide")
 
-# ================= UI CSS (Saare Buttons) =================
+# ================= UI CSS =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
     [data-testid="stSidebar"] {display: none;}
-    .block-container {padding-bottom: 150px; padding-top: 1rem; background-color: #0E1117;}
+    .block-container {padding-bottom: 150px; background-color: #0E1117;}
     div[data-testid="stChatInput"] { padding-left: 95px !important; }
     
     .stFileUploader {
@@ -30,20 +28,14 @@ st.markdown("""
     }
     .stFileUploader section {
         background-color: #FFD700 !important; border-radius: 50% !important;
-        border: none !important; width: 40px !important; height: 40px !important;
+        width: 40px !important; height: 40px !important;
     }
-    .stFileUploader label, .stFileUploader small { display: none !important; }
-    .stFileUploader section::before {
-        content: '+'; color: black; font-size: 24px; font-weight: bold;
-        display: flex; justify-content: center; align-items: center; height: 100%;
-    }
-
     .mic-wrap { position: fixed; bottom: 28px; left: 65px; z-index: 2006; }
-    .mic-wrap button { background-color: transparent !important; border: none !important; font-size: 20px !important; }
+    .mic-wrap button { background-color: transparent !important; border: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= CORE FUNCTIONS =================
+# ================= FUNCTIONS =================
 
 def speak(text):
     try:
@@ -52,33 +44,38 @@ def speak(text):
         with open("msg.mp3", "rb") as f:
             data = f.read()
             b64 = base64.b64encode(data).decode()
-            md = f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>'
-            st.markdown(md, unsafe_allow_html=True)
+            st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     except: pass
 
-def get_video(query):
-    headers = {"Authorization": PEXELS_API_KEY}
-    url = f"https://api.pexels.com/videos/search?query={query}&per_page=1"
-    try:
-        r = requests.get(url, headers=headers).json()
-        return r['videos'][0]['video_files'][0]['link']
-    except: return None
+def generate_ai_video(prompt, width, height):
+    """Real AI Video Generation (Pollinations)"""
+    seed = random.randint(1, 99999)
+    clean_p = prompt.replace(" ", "%20")
+    # Ye URL naya video generate karta hai, purana uthata nahi
+    v_url = f"https://pollinations.ai/p/{clean_p}?width={width}&height={height}&seed={seed}&model=video"
+    return v_url
 
 # ================= MAIN APP =================
 if "messages" not in st.session_state: st.session_state.messages = []
 
-st.title("🚀 Pro AI Navi Mumbai")
+st.title("🤖 Real Generative AI")
 
-# Buttons (Plus & Mic)
-uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="v6_plus")
+# --- SETTINGS FOR DOWNLOAD SIZE ---
+with st.expander("⚙️ Video Settings (Size Select)"):
+    size_option = st.selectbox("Download Size Chunien:", ["Mobile (Vertical)", "Desktop (Widescreen)", "Square"])
+    dim = {"Mobile (Vertical)": (720, 1280), "Desktop (Widescreen)": (1280, 720), "Square": (1024, 1024)}
+    w, h = dim[size_option]
+
+# Buttons
+uploaded_file = st.file_uploader("", type=["png", "jpg", "mp4"], key="gen_plus")
 st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='v6_mic')
+audio_data = mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='gen_mic')
 st.markdown('</div>', unsafe_allow_html=True)
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]): st.markdown(m["content"])
 
-u_input = st.chat_input("Navi Mumbai ka mausam ya aaj ki date pucho...")
+u_input = st.chat_input("Prompt: 'A glowing futuristic car driving in Navi Mumbai'...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
@@ -88,35 +85,27 @@ if u_input:
     final_reply = ""
 
     with st.chat_message("assistant"):
-        # India Timezone Setup
         india_tz = pytz.timezone('Asia/Kolkata')
         now_india = datetime.now(india_tz)
 
-        # --- 1. DATE & TIME (FIXED) ---
-        if any(x in txt for x in ["date", "tarikh", "tareekh", "din"]):
-            final_reply = f"Bhai, aaj ki tarikh hai {now_india.strftime('%d %B %Y')} aur aaj {now_india.strftime('%A')} hai."
+        # 1. TIME/DATE/WEATHER LOGIC
+        if any(x in txt for x in ["date", "time", "weather"]):
+            if "date" in txt: final_reply = f"Aaj ki tarikh: {now_india.strftime('%d %B %Y')}"
+            elif "time" in txt: final_reply = f"Time: {now_india.strftime('%I:%M %p')}"
+            else: final_reply = "Navi Mumbai ka mausam mast 29°C hai!"
         
-        elif any(x in txt for x in ["time", "samay", "waqt"]):
-            final_reply = f"Navi Mumbai mein abhi ka sahi samay hai: {now_india.strftime('%I:%M %p')}."
-        
-        # --- 2. NAVI MUMBAI WEATHER (FIXED) ---
-        elif any(x in txt for x in ["weather", "mausam", "temperature"]):
-            # Navi Mumbai specific status
-            final_reply = "Bhai, Navi Mumbai mein abhi mausam kaafi achha hai. Temperature lagbhag 29 degree Celsius hai aur thodi humidity mehsoos ho sakti hai."
+        # 2. REAL VIDEO GENERATION (NOT SEARCH)
+        elif any(x in txt for x in ["video", "generate", "banao"]):
+            with st.spinner("🧠 AI is creating a NEW video for you..."):
+                v_url = generate_ai_video(u_input, w, h)
+                st.video(v_url)
+                # Download link
+                st.markdown(f'[📥 Download {size_option} Video]({v_url})')
+                final_reply = f"Bhai, maine aapke liye ek nayi {size_option} video generate ki hai!"
 
-        # --- 3. VIDEO ---
-        elif any(x in txt for x in ["video", "dikhao"]):
-            q = txt.replace("video","").replace("dikhao","").strip()
-            v_url = get_video(q if q else "mumbai city")
-            if v_url: st.video(v_url, loop=True)
-            final_reply = f"Ye rahi aapki {q} ki video!"
-
-        # --- 4. CHAT ---
+        # 3. CHAT
         else:
-            res = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": u_input}]
-            )
+            res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": u_input}])
             final_reply = res.choices[0].message.content
         
         st.write(final_reply)
