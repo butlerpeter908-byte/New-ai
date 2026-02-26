@@ -13,11 +13,16 @@ from streamlit_mic_recorder import mic_recorder
 GROQ_KEY = "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"
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="AI Video Engine Pro", layout="wide")
+st.set_page_config(page_title="AI Video Permanent Fix", layout="wide")
 
-if "messages" not in st.session_state: st.session_state.messages = []
+# --- SABSE ZAROORI: Session State Initialization ---
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+# Isme hum video ka data save karenge taaki rerun pe na hate
+if "current_video" not in st.session_state:
+    st.session_state.current_video = None
 
-# ================= UI CSS (TINY MINIMALIST DESIGN) =================
+# ================= UI CSS (TINY YELLOW BUTTON) =================
 st.markdown("""
     <style>
     header, footer, .stDeployButton {visibility: hidden; display: none !important;}
@@ -26,7 +31,6 @@ st.markdown("""
     
     div[data-testid="stChatInput"] { padding-left: 70px !important; }
 
-    /* Tiny Minimal Yellow Plus Button */
     .stFileUploader {
         position: fixed; bottom: 35px; left: 15px;
         width: 30px !important; height: 30px !important; z-index: 3000;
@@ -43,14 +47,11 @@ st.markdown("""
     }
 
     .mic-wrap { position: fixed; bottom: 32px; left: 52px; z-index: 3001; }
-    .mic-wrap button { background-color: transparent !important; border: none !important; font-size: 18px !important; }
-    
-    /* Video Box Styling */
-    .ai-video-box { border: 2px solid #FFD700; border-radius: 15px; overflow: hidden; margin: 10px 0; box-shadow: 0 0 15px rgba(255, 215, 0, 0.2); }
+    .mic-wrap button { background-color: transparent !important; border: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= CORE FUNCTIONS =================
+# ================= FUNCTIONS =================
 
 def speak(text):
     try:
@@ -61,39 +62,30 @@ def speak(text):
             st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     except: pass
 
-def get_pro_video(prompt, w, h):
-    """New High-Speed Generative Engine"""
-    seed = random.randint(1, 9999999)
-    # Using 'Turbo' and 'Cinematic' flags for real AI feel
-    v_url = f"https://pollinations.ai/p/{prompt.replace(' ', '%20')}?width={w}&height={h}&seed={seed}&model=video&enhance=true&turbo=true"
-    return v_url
+def get_pro_video(prompt):
+    seed = random.randint(1, 999999)
+    # Fast rendering engine
+    return f"https://pollinations.ai/p/{prompt.replace(' ', '%20')}?width=720&height=1280&seed={seed}&model=video&enhance=true"
 
 # ================= MAIN APP =================
-st.title("🎬 Pro AI Video Generator")
+st.title("🎬 Persistent AI Video Chat")
 
-with st.sidebar:
-    st.write("### Quality Settings")
-    v_mode = st.radio("Resolution:", ["Mobile (9:16)", "Desktop (16:9)"])
-    w, h = (720, 1280) if "Mobile" in v_mode else (1280, 720)
-
-# Input Controls
-uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "mp4"], key="pro_plus")
-st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
-mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='pro_mic')
-st.markdown('</div>', unsafe_allow_html=True)
-
-# History Display
+# --- 1. DISPLAY HISTORY ---
+# Pehle purani saari videos aur chat dikhao taaki wo delete na lage
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
         if "v_url" in m:
             st.video(m["v_url"])
 
-u_input = st.chat_input("Pucho: 'Generate a realistic video of a flying car'...")
+# UI Buttons
+uploaded_file = st.file_uploader("", type=["png", "jpg", "jpeg", "mp4"], key="p_plus")
+st.markdown('<div class="mic-wrap">', unsafe_allow_html=True)
+mic_recorder(start_prompt="🎙️", stop_prompt="⏹️", key='p_mic')
+st.markdown('</div>', unsafe_allow_html=True)
 
-# File Analysis Logic
-if uploaded_file and not u_input:
-    u_input = f"Bhai, ye file '{uploaded_file.name}' analyse karo."
+# --- 2. INPUT LOGIC ---
+u_input = st.chat_input("Video banao: 'Red car in rain'...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
@@ -101,36 +93,21 @@ if u_input:
     
     txt = u_input.lower()
     final_reply = ""
-    v_url_saved = None
+    v_url_to_save = None
 
     with st.chat_message("assistant"):
-        india_tz = pytz.timezone('Asia/Kolkata')
-        now = datetime.now(india_tz)
-
-        # 🕒 DATE/TIME/WEATHER
-        if any(x in txt for x in ["time", "date", "weather"]):
-            final_reply = f"Navi Mumbai: {now.strftime('%I:%M %p')}, Date: {now.strftime('%d %B %Y')}."
-
-        # 🎬 PRO VIDEO GENERATION (RELIABLE)
-        elif any(x in txt for x in ["video", "generate", "banao"]):
-            with st.status("🧠 AI Model is Dreaming your Video...", expanded=True) as status:
-                st.write("Analyzing prompt for cinematic depth...")
-                v_url = get_pro_video(u_input, w, h)
-                
-                # Double-check the URL
-                st.write("Streaming from high-speed GPU cluster...")
-                time.sleep(3) # Wait for initial frames
-                
-                st.markdown('<div class="ai-video-box">', unsafe_allow_html=True)
+        # VIDEO GENERATION
+        if any(x in txt for x in ["video", "generate", "banao"]):
+            with st.status("🎬 Video Render Ho Rahi Hai...", expanded=True) as status:
+                v_url = get_pro_video(u_input)
+                time.sleep(3) # Wait for processing
                 st.video(v_url)
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                st.download_button("📥 Save HD Video", data=requests.get(v_url).content, file_name="ai_pro_video.mp4")
-                v_url_saved = v_url
-                status.update(label="✅ Video Generated Successfully!", state="complete", expanded=False)
-                final_reply = "Bhai, video generate ho gayi hai! Ye asli AI generative video hai."
-
-        # 🧠 GROQ CHAT
+                st.download_button("📥 Save Video", data=requests.get(v_url).content, file_name="ai_video.mp4")
+                v_url_to_save = v_url # Link ko variable mein rakho
+                status.update(label="✅ Ready!", state="complete")
+                final_reply = "Bhai, ye rahi aapki video. Ab ye chat mein save rahegi!"
+        
+        # NORMAL CHAT
         else:
             res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": u_input}])
             final_reply = res.choices[0].message.content
@@ -138,9 +115,10 @@ if u_input:
         st.write(final_reply)
         speak(final_reply)
 
-    # State Update
-    new_msg = {"role": "assistant", "content": final_reply}
-    if v_url_saved: new_msg["v_url"] = v_url_saved
-    st.session_state.messages.append(new_msg)
-    st.rerun()
+    # --- 3. SAVE TO MEMORY ---
+    new_entry = {"role": "assistant", "content": final_reply}
+    if v_url_to_save:
+        new_entry["v_url"] = v_url_to_save
     
+    st.session_state.messages.append(new_entry)
+    st.rerun() # Page ko force-update karo taaki video fix ho jaye
