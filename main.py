@@ -32,7 +32,7 @@ with st.container():
     with col2:
         menu = st.selectbox("📋 Options & Legal", ["New AI Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions", "Clear Chat"])
         if menu == "About Creator":
-            st.info("👤 **Creator:** [Aapka Naam]\n\n**Goal:** Making AI fast and visual.")
+            st.info("👤 **Creator:** [SIDDIQUI MOHD SAIF]\n\n**Goal:** Making AI fast and visual.")
         elif menu == "Privacy Policy":
             st.info("🔒 **Privacy:** Data is encrypted and deleted after session.")
         elif menu == "Terms & Conditions":
