@@ -36,7 +36,7 @@ with col2:
     elif menu == "About Creator":
         st.markdown("""
         ### 👤 Creator Information
-        * **Developer:** [Your Name]
+        * **Developer:** [Siddiqui Mohd Saif]
         * **Model:** Powered by Groq Llama 3.3 (Ultra Fast).
         * **Goal:** Providing a global, multi-language communication tool.
         """)
