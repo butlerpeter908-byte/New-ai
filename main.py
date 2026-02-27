@@ -7,7 +7,7 @@ from streamlit_mic_recorder import mic_recorder
 from datetime import datetime
 
 # ================= API SETUP =================
-# Aapki di hui fresh key yahan fit kar di hai bhai
+# Aapki working key maine yahan fix kar di hai
 GROQ_KEY = "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" 
 client = Groq(api_key=GROQ_KEY)
 
@@ -16,13 +16,13 @@ st.set_page_config(page_title="Universal Smart AI", layout="wide")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= SMART UI CSS (BUBBLES) =================
+# ================= SMART CHAT UI (WHATSAPP LOOK) =================
 st.markdown("""
 <style>
     header, footer {visibility: hidden;}
     .block-container {padding-top: 1rem; background-color: #0E1117;}
     
-    /* User Message - Right Side */
+    /* User: Right Side */
     .user-bubble {
         background-color: #005c4b; color: white;
         padding: 12px 18px; border-radius: 18px 18px 0 18px;
@@ -30,7 +30,7 @@ st.markdown("""
         box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
     
-    /* AI Message - Left Side */
+    /* AI: Left Side */
     .ai-bubble {
         background-color: #202c33; color: white;
         padding: 12px 18px; border-radius: 18px 18px 18px 0;
@@ -42,16 +42,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= TOP MENU =================
+# ================= TOP OPTIONS MENU =================
 with st.container():
     col1, col2 = st.columns([6, 4])
     with col2:
-        menu = st.selectbox("📋 Options & Legal", ["AI Chat", "Privacy Policy", "Terms & Conditions", "Clear History"])
+        menu = st.selectbox("📋 Options & Legal", ["AI Chat", "Privacy Policy", "Terms & Conditions", "Clear Chat"])
         if menu == "Privacy Policy":
-            st.info("### 🔒 Privacy\nNo chat logs are stored permanently. Sessions are encrypted.")
+            st.info("### 🔒 Privacy: Your data is session-based and encrypted.")
         elif menu == "Terms & Conditions":
-            st.warning("### ⚖️ Terms\nAI behavior depends on real-time API. Use responsibly.")
-        elif menu == "Clear History":
+            st.warning("### ⚖️ Terms: No illegal content. AI speed powered by Groq.")
+        elif menu == "Clear Chat":
             if st.button("Confirm Reset"):
                 st.session_state.messages = []
                 st.rerun()
@@ -68,12 +68,12 @@ def speak_auto(text):
         st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     except: pass
 
-# ================= MAIN APP =================
+# ================= MAIN CHAT AREA =================
 st.title("🌍 Smart Global AI")
 
-# Time & Date Injection
+# Real-Time Info
 now = datetime.now()
-current_info = now.strftime("%A, %b %d, %Y | Time: %I:%M %p")
+current_info = f"Today is {now.strftime('%A, %b %d, %Y')}. Local Time: {now.strftime('%I:%M %p')}. Location: Navi Mumbai."
 
 st.markdown('<div class="chat-container">', unsafe_allow_html=True)
 for m in st.session_state.messages:
@@ -83,18 +83,17 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # --- INPUT ---
 st.markdown("---")
-mic_recorder(start_prompt="🎙️ Voice", stop_prompt="⏹️ Send", key='smart_v20')
-u_input = st.chat_input("Puchiye: Time, Date, Weather ya kuch bhi...")
+mic_recorder(start_prompt="🎙️ Voice", stop_prompt="⏹️ Send", key='smart_v30')
+u_input = st.chat_input("Puchiye: Time, Weather, ya kuch bhi...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
     
     try:
-        # Smart Context with Time and Date
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"Context: {current_info}, Location: Navi Mumbai. Respond in user's language. Never output code blocks."},
+                {"role": "system", "content": f"Context: {current_info}. Identify user language (Hindi/English/Hinglish). Be super fast. No code output."},
                 {"role": "user", "content": u_input}
             ]
         )
