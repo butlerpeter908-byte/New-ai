@@ -1,80 +1,92 @@
 import streamlit as st
 from groq import Groq
-import requests
 from gtts import gTTS
 import base64
 import io
 from streamlit_mic_recorder import mic_recorder
 
-# ================= API SETUP =================
+# ================= SETUP =================
 GROQ_KEY = "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"
-PIXABAY_KEY = "48943715-64d84f88e7f1d448404a11c81"
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="Ultra Fast Indian AI", layout="wide")
+st.set_page_config(page_title="Universal AI Pro Max", layout="wide")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= UI & MENU =================
-col1, col2 = st.columns([7, 3])
+# ================= TOP MENU (DETAILED) =================
+col1, col2 = st.columns([6, 4])
 with col2:
-    voice_choice = st.selectbox("🗣️ Choose Voice", ["Hindi (Indian Female)", "English (Indian Accent)"])
-    if st.button("🗑️ Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
+    menu = st.selectbox("📋 Options & Legal", ["AI Chat", "Privacy Policy", "Terms & Conditions", "About Creator", "Clear History"])
+    
+    if menu == "Privacy Policy":
+        st.markdown("""
+        ### 🔒 Privacy Policy
+        * **Data Encryption:** Your conversations are processed in real-time and not stored on our permanent servers.
+        * **Anonymity:** We do not collect names, emails, or personal identifiers.
+        * **Cookies:** This app uses minimal session cookies to keep your chat active.
+        """)
+    elif menu == "Terms & Conditions":
+        st.markdown("""
+        ### ⚖️ Terms & Conditions
+        * **Usage:** Users must not generate hate speech, illegal content, or NSFW material.
+        * **Liability:** This AI is for informational purposes. We are not responsible for any decisions made based on AI output.
+        * **Age Limit:** Users must be 13+ to interact with the global model.
+        """)
+    elif menu == "About Creator":
+        st.markdown("""
+        ### 👤 Creator Information
+        * **Developer:** [Your Name]
+        * **Model:** Powered by Groq Llama 3.3 (Ultra Fast).
+        * **Goal:** Providing a global, multi-language communication tool.
+        """)
+    elif menu == "Clear History":
+        if st.button("Confirm Clear Chat"):
+            st.session_state.messages = []
+            st.rerun()
 
-# ================= VOICE ENGINE (INDIAN) =================
-def speak_indian(text, lang_choice):
+# ================= VOICE ENGINE =================
+def speak_auto(text):
     try:
-        lang_code = 'hi' if "Hindi" in lang_choice else 'en'
-        tld = 'co.in' # Indian Accent TLD
-        tts = gTTS(text=text, lang=lang_code, tld=tld, slow=False)
+        lang = 'hi' if any(ord(c) > 2300 for c in text) else 'en'
+        tts = gTTS(text=text, lang=lang, tld='co.in', slow=False)
         fp = io.BytesIO()
         tts.write_to_fp(fp)
         fp.seek(0)
         b64 = base64.b64encode(fp.read()).decode()
         st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
-    except Exception as e:
-        pass
+    except: pass
 
 # ================= APP LOGIC =================
-st.title("⚡ Ultra-Fast Indian AI")
+st.title("🌍 Global Multi-Lang AI")
 
 for m in st.session_state.messages:
     with st.chat_message(m["role"]):
         st.markdown(m["content"])
 
-# --- IMPROVED MIC ---
-st.write("🎤 Tap to Speak Clear:")
-audio_data = mic_recorder(start_prompt="Record Voice", stop_prompt="Stop & Send", key='pro_mic')
+# --- MIC & INPUT ---
+audio_data = mic_recorder(start_prompt="🎙️ Speak", stop_prompt="⏹️ Stop", key='pro_v10')
+u_input = st.chat_input("Type in any language (English default)...")
 
-u_input = st.chat_input("Type or use mic above...")
-
-# Handle Voice or Text Input
-final_input = None
-if audio_data:
-    # Future enhancement: Add Whisper API for better transcription
-    final_input = "User sent a voice message" 
 if u_input:
-    final_input = u_input
-
-if final_input:
-    st.session_state.messages.append({"role": "user", "content": final_input})
-    with st.chat_message("user"): st.markdown(final_input)
+    st.session_state.messages.append({"role": "user", "content": u_input})
+    with st.chat_message("user"): st.markdown(u_input)
     
     with st.chat_message("assistant"):
-        # FASTEST LLM CALL
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": "You are a super-fast Indian AI. Use a mix of Hinglish. Answer instantly in under 1 second. Never show code."},
-                {"role": "user", "content": final_input}
+                {"role": "system", "content": """
+                1. Default language: English. 
+                2. Detect user language and reply in the SAME language (Hindi, Hinglish, Spanish, etc.).
+                3. Be professional and extremely fast (under 1s).
+                """},
+                {"role": "user", "content": u_input}
             ]
         )
         reply = res.choices[0].message.content
         st.write(reply)
-        speak_indian(reply, voice_choice)
+        speak_auto(reply)
         st.session_state.messages.append({"role": "assistant", "content": reply})
     st.rerun()
     
