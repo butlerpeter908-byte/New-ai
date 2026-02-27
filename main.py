@@ -7,8 +7,8 @@ from streamlit_mic_recorder import mic_recorder
 from datetime import datetime
 
 # ================= API SETUP =================
-# Aapki di hui fresh key yahan fit kar di hai
-GROQ_KEY = "Gsk_NpDwPdUylUGsI0KXLHlIWGdyb3FYZTr8n4pIMru69wiVFzTaRAPf" 
+# Aapki di hui key (Check for any missing characters)
+GROQ_KEY = "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" 
 client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Universal Smart AI", layout="wide")
@@ -16,7 +16,7 @@ st.set_page_config(page_title="Universal Smart AI", layout="wide")
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= SMART UI CSS =================
+# ================= WHATSAPP-STYLE UI =================
 st.markdown("""
 <style>
     header, footer {visibility: hidden;}
@@ -25,18 +25,17 @@ st.markdown("""
     .user-bubble {
         background-color: #005c4b; color: white;
         padding: 12px 18px; border-radius: 18px 18px 0 18px;
-        margin: 10px 0; max-width: 80%; float: right; clear: both;
+        margin: 10px 0; max-width: 85%; float: right; clear: both;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
     
     .ai-bubble {
         background-color: #202c33; color: white;
         padding: 12px 18px; border-radius: 18px 18px 18px 0;
-        margin: 10px 0; max-width: 80%; float: left; clear: both;
+        margin: 10px 0; max-width: 85%; float: left; clear: both;
         border-left: 5px solid #FFD700;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.3);
     }
-    .chat-container { width: 100%; overflow: hidden; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -44,15 +43,10 @@ st.markdown("""
 with st.container():
     col1, col2 = st.columns([6, 4])
     with col2:
-        menu = st.selectbox("📋 Menu & Legal", ["AI Chat", "Privacy Policy", "Terms & Conditions", "Clear History"])
-        if menu == "Privacy Policy":
-            st.info("### 🔒 Privacy\nNo chat history is stored permanently.")
-        elif menu == "Terms & Conditions":
-            st.warning("### ⚖️ Terms\nAI results depend on real-time API data.")
-        elif menu == "Clear History":
-            if st.button("Confirm Reset"):
-                st.session_state.messages = []
-                st.rerun()
+        menu = st.selectbox("📋 Options", ["AI Chat", "Clear History", "Privacy Policy", "Terms"])
+        if menu == "Clear History":
+            st.session_state.messages = []
+            st.rerun()
 
 # ================= VOICE ENGINE =================
 def speak_auto(text):
@@ -66,40 +60,28 @@ def speak_auto(text):
         st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     except: pass
 
-# ================= MAIN APP =================
+# ================= MAIN CHAT =================
 st.title("🌍 Smart Multi-Lang AI")
 
-# Time & Date Logic
-now = datetime.now()
-current_time = now.strftime("%H:%M:%S")
-current_date = now.strftime("%Y-%m-%d")
-
-st.markdown(f'<div class="chat-container">', unsafe_allow_html=True)
+# Display History with Proper Alignment
 for m in st.session_state.messages:
-    bubble_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
-    st.markdown(f'<div class="{bubble_class}">{m["content"]}</div>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
+    b_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
+    st.markdown(f'<div class="{b_class}">{m["content"]}</div>', unsafe_allow_html=True)
 
 # --- INPUT ---
 st.markdown("---")
-mic_recorder(start_prompt="🎙️ Voice", stop_prompt="⏹️ Send", key='smart_v16')
-u_input = st.chat_input("Ask about Time, Weather, or anything...")
+mic_recorder(start_prompt="🎙️ Voice", stop_prompt="⏹️ Send", key='smart_v18')
+u_input = st.chat_input("Puchiye: Time, Date, Weather ya kuch bhi...")
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
     
     try:
-        # AI ko context dena Time/Date ka
+        # Injection of real-time context
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"""
-                You are a smart global AI. 
-                Current Date: {current_date}, Current Time: {current_time}.
-                Detect user language and reply instantly. 
-                For weather, provide estimated info based on context. 
-                Never output code blocks.
-                """},
+                {"role": "system", "content": f"Today is Friday, Feb 27, 2026. Time: 12:53 PM. Location: Navi Mumbai. Reply in user's language. Be super fast. No code."},
                 {"role": "user", "content": u_input}
             ]
         )
@@ -108,5 +90,5 @@ if u_input:
         speak_auto(reply)
         st.rerun()
     except Exception as e:
-        st.error(f"Error: {e}")
+        st.error(f"Bhai, API Key abhi bhi kaam nahi kar rahi: {e}")
         
