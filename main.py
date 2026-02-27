@@ -25,19 +25,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ================= VOICE TRANSCRIPTION LOGIC =================
+# ================= VOICE WITH SILENCE FILTER =================
 def process_audio(audio_data):
     if audio_data and 'bytes' in audio_data:
+        # Chhota audio (silence) filter
+        if len(audio_data['bytes']) < 5000: 
+            return None
         try:
-            # Groq Whisper API for Transcribing
             audio_file = ("temp.wav", audio_data['bytes'], "audio/wav")
             transcription = client.audio.transcriptions.create(
                 file=audio_file,
                 model="whisper-large-v3-turbo",
                 response_format="text"
             )
+            # Faltu "Thank you" filter
+            junk_words = ["thank you", "thanks", "t h a n k", "bye"]
+            if transcription.strip().lower() in junk_words:
+                return None
             return transcription
-        except Exception as e:
+        except:
             return None
     return None
 
@@ -57,31 +63,26 @@ st.title("🌍 Smart Multi-Lang AI")
 now = datetime.now()
 current_info = now.strftime("%A, %b %d, %Y | %I:%M %p")
 
-# Show Chat History
 for m in st.session_state.messages:
     b_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
     st.markdown(f'<div class="{b_class}">{m["content"]}</div>', unsafe_allow_html=True)
 
-# --- VOICE & TEXT INPUT ---
 st.markdown("---")
-audio_data = mic_recorder(start_prompt="🎙️ Bolne ke liye click karein", stop_prompt="⏹️ Rokiye", key='transcribe_v1')
+audio_data = mic_recorder(start_prompt="🎙️ Bolne ke liye click karein", stop_prompt="⏹️ Rokiye", key='voice_v21')
+u_input = st.chat_input("Yahan likhein...")
 
-u_input = st.chat_input("Type here...")
-
-# Handle Voice Input
 if audio_data:
-    transcribed_text = process_audio(audio_data)
-    if transcribed_text:
-        u_input = transcribed_text
+    voice_text = process_audio(audio_data)
+    if voice_text:
+        u_input = voice_text
 
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
-    
     try:
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"Today: {current_info}. Location: Navi Mumbai. Directly answer the user's question. NEVER say 'It seems you are speaking English' or identify the language. Just reply in the user's language."},
+                {"role": "system", "content": f"Context: {current_info}, Navi Mumbai. Directly answer the question. No 'It seems...' or filler talk. Reply in user's language."},
                 {"role": "user", "content": u_input}
             ]
         )
