@@ -22,32 +22,12 @@ st.markdown("""
     .block-container {padding-top: 1rem; background-color: #0E1117;}
     .user-bubble { background-color: #005c4b; color: white; padding: 12px 18px; border-radius: 18px 18px 0 18px; margin: 10px 0; max-width: 80%; float: right; clear: both; }
     .ai-bubble { background-color: #202c33; color: white; padding: 12px 18px; border-radius: 18px 18px 18px 0; margin: 10px 0; max-width: 80%; float: left; clear: both; border-left: 5px solid #FFD700; }
+    .stButton>button { border-radius: 20px; height: 30px; font-size: 12px; padding: 0 15px; }
 </style>
 """, unsafe_allow_html=True)
 
-# ================= VOICE WITH SILENCE FILTER =================
-def process_audio(audio_data):
-    if audio_data and 'bytes' in audio_data:
-        # Chhota audio (silence) filter
-        if len(audio_data['bytes']) < 5000: 
-            return None
-        try:
-            audio_file = ("temp.wav", audio_data['bytes'], "audio/wav")
-            transcription = client.audio.transcriptions.create(
-                file=audio_file,
-                model="whisper-large-v3-turbo",
-                response_format="text"
-            )
-            # Faltu "Thank you" filter
-            junk_words = ["thank you", "thanks", "t h a n k", "bye"]
-            if transcription.strip().lower() in junk_words:
-                return None
-            return transcription
-        except:
-            return None
-    return None
-
-def speak_auto(text):
+# ================= VOICE LOGIC (Manual Click) =================
+def get_audio_html(text):
     try:
         lang = 'hi' if any(ord(c) > 2300 for c in text) else 'en'
         tts = gTTS(text=text, lang=lang, tld='co.in', slow=False)
@@ -55,21 +35,46 @@ def speak_auto(text):
         tts.write_to_fp(fp)
         fp.seek(0)
         b64 = base64.b64encode(fp.read()).decode()
-        st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
-    except: pass
+        return f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>'
+    except: return ""
+
+def process_audio(audio_data):
+    if audio_data and 'bytes' in audio_data:
+        if len(audio_data['bytes']) < 8000: return None # Noise filter
+        try:
+            audio_file = ("temp.wav", audio_data['bytes'], "audio/wav")
+            # Added prompt to guide Whisper for Hindi/Hinglish accuracy
+            transcription = client.audio.transcriptions.create(
+                file=audio_file,
+                model="whisper-large-v3-turbo",
+                prompt="User is speaking in Hindi or Hinglish. Ignore background noise and silence.",
+                response_format="text"
+            )
+            text = transcription.strip()
+            # Junk filter
+            if text.lower() in ["thank you.", "thanks.", "bye.", "you"]: return None
+            return text
+        except: return None
+    return None
 
 # ================= MAIN APP =================
 st.title("🌍 Smart Multi-Lang AI")
 now = datetime.now()
 current_info = now.strftime("%A, %b %d, %Y | %I:%M %p")
 
-for m in st.session_state.messages:
+# Show Chat History with Manual Voice Button
+for i, m in enumerate(st.session_state.messages):
     b_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
     st.markdown(f'<div class="{b_class}">{m["content"]}</div>', unsafe_allow_html=True)
+    
+    if m["role"] == "assistant":
+        if st.button(f"🔊 Listen", key=f"voice_{i}"):
+            html = get_audio_html(m["content"])
+            st.markdown(html, unsafe_allow_html=True)
 
 st.markdown("---")
-audio_data = mic_recorder(start_prompt="🎙️ Bolne ke liye click karein", stop_prompt="⏹️ Rokiye", key='voice_v21')
-u_input = st.chat_input("Yahan likhein...")
+audio_data = mic_recorder(start_prompt="🎙️ Tap to Speak", stop_prompt="⏹️ Send", key='voice_v25')
+u_input = st.chat_input("Type here...")
 
 if audio_data:
     voice_text = process_audio(audio_data)
@@ -82,13 +87,12 @@ if u_input:
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[
-                {"role": "system", "content": f"Context: {current_info}, Navi Mumbai. Directly answer the question. No 'It seems...' or filler talk. Reply in user's language."},
+                {"role": "system", "content": f"Context: {current_info}, Navi Mumbai. Be direct. No filler talk. Reply in user's language."},
                 {"role": "user", "content": u_input}
             ]
         )
         reply = res.choices[0].message.content
         st.session_state.messages.append({"role": "assistant", "content": reply})
-        speak_auto(reply)
         st.rerun()
     except Exception as e:
         st.error(f"Error: {e}")
