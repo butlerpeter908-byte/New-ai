@@ -22,7 +22,7 @@ if "logged_in" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= 3. LOGIN PAGE =================
+# ================= 3. APP CONFIG & LOGIN =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 if not st.session_state.logged_in:
@@ -56,33 +56,33 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-# ================= 5. FEEDBACK SYSTEM (GMAIL WORKING) =================
+# ================= 5. UPDATED FEEDBACK SECTION =================
 if menu == "Feedback":
     st.header("📝 Submit Your Feedback")
-    st.write("Aapka feedback seedha Siddique Mohammad Saif ke paas jayega.")
     
     # Feedback Input Box
-    user_feedback = st.text_area("Write your message here...", height=150, placeholder="Example: App is great, but add more features!")
+    user_feedback = st.text_area("Write your message here...", height=150, placeholder="Your thoughts...")
     
-    if st.button("Submit to Developer"):
+    if st.button("Submit"):
         if user_feedback:
             try:
-                # Setup Email Content
+                # Email Setup
                 msg = MIMEText(f"User: {st.session_state.current_user}\nFeedback: {user_feedback}")
-                msg['Subject'] = f"New AI Feedback from {st.session_state.current_user}"
+                msg['Subject'] = f"New AI Feedback"
                 msg['From'] = MY_GMAIL
                 msg['To'] = MY_GMAIL
                 
-                # SMTP Server Connection
+                # SMTP Send
                 with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                     server.login(MY_GMAIL, APP_PASS)
                     server.send_message(msg)
                 
-                st.success("✅ Thanks for feedback! Siddique ko mail mil gaya hai.")
-            except Exception as e:
-                st.error(f"Error: Mail nahi ja saka. Check your App Password.")
+                # Simple Success Message as requested
+                st.success("Thanks for feedback") 
+            except Exception:
+                st.error("Error sending feedback.")
         else:
-            st.warning("Pehle kuch likho toh sahi bhai!")
+            st.warning("Please enter your message first.")
 
 # ================= 6. CHAT & OTHER PAGES =================
 elif menu == "Chat":
@@ -110,9 +110,8 @@ elif menu == "About Creator":
 
 elif menu == "Privacy Policy":
     st.header("🔒 Privacy Policy")
-    st.write("Your data is handled securely.")
+    st.write("Your feedback and messages are handled securely.")
 
 elif menu == "Terms & Conditions":
     st.header("⚖️ Terms & Conditions")
-    st.write("Use New AI responsibly.")
-    
+    st.write("Usage of New AI is subject to fair use policies.")
