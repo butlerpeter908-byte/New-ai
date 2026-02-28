@@ -2,9 +2,8 @@ import streamlit as st
 from groq import Groq
 import smtplib
 from email.mime.text import MIMEText
-from datetime import datetime
 
-# ================= 1. IDENTITY & CREDENTIALS =================
+# ================= 1. CREDENTIALS =================
 GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn"
@@ -12,103 +11,103 @@ CREATOR_NAME = "Siddique Mohammad Saif"
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. SESSION & LOGIN SYSTEM =================
-if "users" not in st.session_state:
-    st.session_state.users = {"admin": "admin123"} # Default user
+# ================= 2. REFRESH-PROOF LOGIN =================
+# User data ko session mein save rakhne ke liye logic
+if "user_db" not in st.session_state:
+    st.session_state.user_db = {"admin": "123"} # Permanent admin account
 
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
+if "is_logged_in" not in st.session_state:
+    st.session_state.is_logged_in = False
 
-# --- Login / Sign Up Page ---
-if not st.session_state.logged_in:
-    st.title("🔐 Welcome to New AI")
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
+# ================= 3. PERMANENT SIDEBAR MENU =================
+# Isko hum Authentication se PEHLE define karenge taaki ye hamesha dikhe
+with st.sidebar:
+    st.title("🤖 New AI Menu")
     
-    with tab2:
-        new_u = st.text_input("Choose Username", key="reg_u")
-        new_p = st.text_input("Choose Password", type="password", key="reg_p")
-        if st.button("Create Account"):
+    # Ye Radio button hamesha sidebar mein dikhega
+    app_mode = st.radio("Navigate:", 
+                        ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
+    
+    st.markdown("---")
+    if st.session_state.is_logged_in:
+        st.write(f"Logged in as: **{st.session_state.current_user}**")
+        if st.button("Logout"):
+            st.session_state.is_logged_in = False
+            st.rerun()
+
+# ================= 4. LOGIN PAGE LOGIC =================
+if not st.session_state.is_logged_in:
+    st.title("🔐 Login to New AI")
+    tab_log, tab_sign = st.tabs(["Login", "Sign Up"])
+    
+    with tab_sign:
+        new_u = st.text_input("Create Username", key="s_u")
+        new_p = st.text_input("Create Password", type="password", key="s_p")
+        if st.button("Register Account"):
             if new_u and new_p:
-                st.session_state.users[new_u] = new_p
-                st.success("Account created! Now go to Login.")
-            else: st.error("Details fill karein.")
-            
-    with tab1:
-        u = st.text_input("Username", key="log_u")
-        p = st.text_input("Password", type="password", key="log_p")
+                st.session_state.user_db[new_u] = new_p
+                st.success("Registration Successful! Please Login.")
+            else: st.error("Please fill all details")
+
+    with tab_log:
+        u_name = st.text_input("Username", key="l_u")
+        u_pass = st.text_input("Password", type="password", key="l_p")
+        
         c1, c2 = st.columns(2)
         with c1:
             if st.button("Login"):
-                if u in st.session_state.users and st.session_state.users[u] == p:
-                    st.session_state.logged_in = True
-                    st.session_state.current_user = u
+                if u_name in st.session_state.user_db and st.session_state.user_db[u_name] == u_pass:
+                    st.session_state.is_logged_in = True
+                    st.session_state.current_user = u_name
                     st.rerun()
-                else: st.error("Wrong details!")
+                else: st.error("Wrong Username or Password")
         with c2:
-            if st.button("Forgot Password"):
-                if u in st.session_state.users:
-                    st.info(f"Password for {u}: {st.session_state.users[u]}")
+            if st.button("Forgot Details?"):
+                if u_name in st.session_state.user_db:
+                    st.info(f"Password for {u_name} is: {st.session_state.user_db[u_name]}")
                 else: st.warning("Username not found.")
-    st.stop()
+    st.stop() # Login hone tak aage ka code nahi chalega
 
-# ================= 3. PERMANENT SIDEBAR MENU =================
-st.set_page_config(page_title="New AI 🤖", layout="wide")
-
-with st.sidebar:
-    st.title(f"🤖 New AI Menu")
-    st.write(f"User: **{st.session_state.current_user}**")
-    st.markdown("---")
-    
-    # Ye raha wo menu jo kabhi nahi hatega
-    menu = st.radio("📌 Navigation", 
-                    ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
-    
-    st.markdown("---")
-    if st.button("Logout"):
-        st.session_state.logged_in = False
-        st.rerun()
-
-# ================= 4. WHATSAPP STYLE UI & PAGES =================
-st.markdown("""
-<style>
-    header, footer {visibility: hidden;}
-    .block-container {background-color: #0b141a; padding-top: 1rem;}
-    .user-bubble { background-color: #005c4b; color: white; padding: 10px 15px; border-radius: 15px 15px 0 15px; margin: 8px 0; max-width: 75%; float: right; clear: both; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
-    .ai-bubble { background-color: #202c33; color: white; padding: 10px 15px; border-radius: 15px 15px 15px 0; margin: 8px 0; max-width: 75%; float: left; clear: both; border-left: 4px solid #00a884; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13); }
-</style>
-""", unsafe_allow_html=True)
-
-# --- Logic for Menu Screens ---
-if menu == "Chat":
+# ================= 5. MAIN CONTENT (MENU PAGES) =================
+if app_mode == "Chat":
     st.title("💬 WhatsApp Chat")
-    if "messages" not in st.session_state: st.session_state.messages = []
+    # WhatsApp Look CSS
+    st.markdown("""
+    <style>
+        header, footer {visibility: hidden;}
+        .block-container {background-color: #0b141a;}
+        .user-bubble { background-color: #005c4b; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: right; clear: both; }
+        .ai-bubble { background-color: #202c33; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: left; clear: both; border-left: 4px solid #00a884; }
+    </style>
+    """, unsafe_allow_html=True)
 
-    for m in st.session_state.messages:
-        div = "user-bubble" if m["role"] == "user" else "ai-bubble"
-        st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
+    if "chat_history" not in st.session_state: st.session_state.chat_history = []
 
-    prompt = st.chat_input("Siddique Mohammad Saif ka AI ready hai...")
-    if prompt:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        # Identity System Prompt
-        sys_msg = f"Your name is New AI. You were created by {CREATOR_NAME}. Answer strictly as this persona."
-        res = client.chat.completions.create(
+    for chat in st.session_state.chat_history:
+        style = "user-bubble" if chat["role"] == "user" else "ai-bubble"
+        st.markdown(f'<div class="{style}">{chat["content"]}</div>', unsafe_allow_html=True)
+
+    user_q = st.chat_input("Siddique Mohammad Saif ka AI ready hai...")
+    if user_q:
+        st.session_state.chat_history.append({"role": "user", "content": user_q})
+        response = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": prompt}]
+            messages=[{"role": "system", "content": f"Your name is New AI, created by {CREATOR_NAME}."}, 
+                      {"role": "user", "content": user_q}]
         )
-        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
+        st.session_state.chat_history.append({"role": "assistant", "content": response.choices[0].message.content})
         st.rerun()
 
-elif menu == "About Creator":
+elif app_mode == "About Creator":
     st.header("👤 About Creator")
-    st.info(f"This AI is proudly created and maintained by **{CREATOR_NAME}**.")
+    st.info(f"This AI application is designed and developed by **{CREATOR_NAME}**.")
 
-elif menu == "Feedback":
-    st.header("📝 Feedback")
-    f_text = st.text_area("Humein batayein ki aapko ye AI kaisa laga:")
-    if st.button("Submit Feedback"):
+elif app_mode == "Feedback":
+    st.header("📝 Submit Feedback")
+    f_msg = st.text_area("Your Message:")
+    if st.button("Send"):
         try:
-            msg = MIMEText(f"Feedback from {st.session_state.current_user}: {f_text}")
+            msg = MIMEText(f"Feedback from {st.session_state.current_user}: {f_msg}")
             msg['Subject'] = 'New AI Feedback'
             msg['From'] = MY_GMAIL
             msg['To'] = MY_GMAIL
@@ -116,13 +115,13 @@ elif menu == "Feedback":
                 server.login(MY_GMAIL, APP_PASS)
                 server.send_message(msg)
             st.success("Thanks for feedback")
-        except: st.error("Email sending failed.")
+        except: st.error("Feedback error")
 
-elif menu == "Privacy Policy":
+elif app_mode == "Privacy Policy":
     st.header("🔒 Privacy Policy")
-    st.write("Hum aapki privacy ka dhyan rakhte hain. Aapka data humare servers par save nahi hota.")
+    st.write("Aapka data secure hai aur hum koi bhi personal chat save nahi karte.")
 
-elif menu == "Terms & Conditions":
+elif app_mode == "Terms & Conditions":
     st.header("⚖️ Terms & Conditions")
-    st.write("Is AI ka upyog sirf achhe kamo ke liye karein. Galat bhasha ka upyog na karein.")
+    st.write("Is AI ka istemal educational aur creative kamo ke liye karein.")
     
