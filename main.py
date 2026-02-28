@@ -7,7 +7,6 @@ from email.mime.text import MIMEText
 GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn"
-# Aapka naam yahan pakka kar diya hai
 CREATOR_NAME = "Siddique Mohammad Saif" 
 
 client = Groq(api_key=GROQ_KEY)
@@ -34,7 +33,7 @@ with st.sidebar:
             st.session_state.logged_in = False
             st.rerun()
 
-# ================= 4. LOGIN LOGIC =================
+# ================= 4. LOGIN PAGE (RETAINED) =================
 if not st.session_state.logged_in:
     st.title("🔐 Login to New AI")
     t1, t2 = st.tabs(["Login", "Sign Up"])
@@ -54,18 +53,20 @@ if not st.session_state.logged_in:
             else: st.error("Invalid Details")
     st.stop()
 
-# ================= 5. MENU PAGES (ENGLISH CONTENT) =================
+# ================= 5. MENU PAGES =================
 if menu == "Chat":
-    st.title("💬 WhatsApp Chat")
+    # Page title changed from WhatsApp Chat to New AI
+    st.title("💬 New AI") 
     st.markdown("""<style>.user-bubble { background-color: #005c4b; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: right; clear: both; } .ai-bubble { background-color: #202c33; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: left; clear: both; border-left: 4px solid #00a884; }</style>""", unsafe_allow_html=True)
     if "messages" not in st.session_state: st.session_state.messages = []
     for m in st.session_state.messages:
         div = "user-bubble" if m["role"] == "user" else "ai-bubble"
         st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
-    q = st.chat_input("Siddique Mohammad Saif ka AI ready hai...")
+    
+    # Watermark changed to "Welcome to new ai"
+    q = st.chat_input("Welcome to new ai") 
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        # AI ka naam New AI aur Creator ka naam Siddique Mohammad Saif set hai
         res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": f"Your name is New AI. You were created by {CREATOR_NAME}."}, {"role": "user", "content": q}])
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content}); st.rerun()
 
