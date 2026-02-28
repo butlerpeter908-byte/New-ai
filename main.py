@@ -1,5 +1,8 @@
 import streamlit as st
 from groq import Groq
+from gtts import gTTS
+import base64
+import io
 import smtplib
 from email.mime.text import MIMEText
 
@@ -13,58 +16,100 @@ client = Groq(api_key=GROQ_KEY)
 
 # ================= 2. REFRESH-PROOF SYSTEM =================
 if "user_db" not in st.session_state:
-    st.session_state.user_db = {"admin": "123"}
+    st.session_state.user_db = {"admin": "123"} # Default account
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-# ================= 3. PERMANENT SIDEBAR MENU =================
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# ================= 3. STYLISH LOGIN PAGE (NEW LOOK) =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
-with st.sidebar:
-    st.title("🤖 New AI Menu")
-    menu = st.radio("Navigation", 
-                    ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
-    
-    st.markdown("---")
-    if st.session_state.logged_in:
-        st.write(f"👤 User: **{st.session_state.current_user}**")
-        if st.button("Logout"):
-            st.session_state.logged_in = False
-            st.rerun()
+# Modern CSS for Login
+login_style = """
+<style>
+    .stApp { background-color: #0b141a; }
+    .login-container {
+        background: rgba(32, 44, 51, 0.8);
+        padding: 30px;
+        border-radius: 20px;
+        border: 1px solid #00a884;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+        text-align: center;
+    }
+    h1 { color: #00a884 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+</style>
+"""
+st.markdown(login_style, unsafe_allow_html=True)
 
-# ================= 4. LOGIN PAGE (RETAINED) =================
 if not st.session_state.logged_in:
-    st.title("🔐 Login to New AI")
-    t1, t2 = st.tabs(["Login", "Sign Up"])
+    st.markdown('<div class="login-container"><h1>🤖 Welcome to New AI</h1><p style="color: #e9edef;">Smart AI by Siddique Mohammad Saif</p></div>', unsafe_allow_html=True)
+    
+    t1, t2 = st.tabs(["🔑 Login", "📝 Sign Up"])
+    
     with t2:
-        nu = st.text_input("New Username", key="s_u")
-        np = st.text_input("New Password", type="password", key="s_p")
-        if st.button("Register"):
-            if nu and np: st.session_state.user_db[nu] = np; st.success("Done!")
+        nu = st.text_input("Choose a Username", key="s_u")
+        np = st.text_input("Choose a Password", type="password", key="s_p")
+        if st.button("Create My Account"):
+            if nu and np:
+                st.session_state.user_db[nu] = np
+                st.success(f"Account for {nu} created! Now switch to Login tab.")
+            else: st.error("Please fill all fields.")
+
     with t1:
         u = st.text_input("Username", key="l_u")
         p = st.text_input("Password", type="password", key="l_p")
-        if st.button("Login"):
-            if u in st.session_state.user_db and st.session_state.user_db[u] == p:
-                st.session_state.logged_in = True
-                st.session_state.current_user = u
-                st.rerun()
-            else: st.error("Invalid Details")
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Sign In"):
+                if u in st.session_state.user_db and st.session_state.user_db[u] == p:
+                    st.session_state.logged_in = True
+                    st.session_state.current_user = u
+                    st.rerun()
+                else: st.error("Invalid Username or Password")
+        
+        with col2:
+            # FIXED FORGOT LOGIC
+            if st.button("Forgot Password?"):
+                if u == "":
+                    st.warning("Pehle username toh likho bhai!")
+                elif u in st.session_state.user_db:
+                    st.info(f"Hi {u}, your password is: **{st.session_state.user_db[u]}**")
+                else:
+                    st.error("Ye username hamare paas nahi hai. Sign Up karein!")
     st.stop()
 
-# ================= 5. MENU PAGES =================
+# ================= 4. SIDEBAR MENU (PERMANENT) =================
+with st.sidebar:
+    st.title("🤖 New AI Menu")
+    menu = st.radio("Navigation", ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
+    st.markdown("---")
+    if st.button("🗑️ Clear Chat"):
+        st.session_state.messages = []
+        st.rerun()
+    if st.button("Logout"):
+        st.session_state.logged_in = False
+        st.rerun()
+
+# ================= 5. MAIN CHAT & PAGES =================
 if menu == "Chat":
-    # Page title changed from WhatsApp Chat to New AI
-    st.title("💬 New AI") 
+    st.title("💬 New AI")
     st.markdown("""<style>.user-bubble { background-color: #005c4b; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: right; clear: both; } .ai-bubble { background-color: #202c33; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: left; clear: both; border-left: 4px solid #00a884; }</style>""", unsafe_allow_html=True)
-    if "messages" not in st.session_state: st.session_state.messages = []
-    for m in st.session_state.messages:
+    
+    for i, m in enumerate(st.session_state.messages):
         div = "user-bubble" if m["role"] == "user" else "ai-bubble"
         st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
+        if m["role"] == "assistant":
+            if st.button(f"🔊 Listen", key=f"v_{i}"):
+                tts = gTTS(text=m["content"], lang='hi')
+                fp = io.BytesIO(); tts.write_to_fp(fp); fp.seek(0)
+                b64 = base64.b64encode(fp.read()).decode()
+                st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
     
-    # Watermark changed to "Welcome to new ai"
-    q = st.chat_input("Welcome to new ai") 
+    q = st.chat_input("Welcome to new ai")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": f"Your name is New AI. You were created by {CREATOR_NAME}."}, {"role": "user", "content": q}])
@@ -72,36 +117,17 @@ if menu == "Chat":
 
 elif menu == "About Creator":
     st.header("👤 About Creator")
-    st.write(f"""
-    **Developer Information:**
-    - **Name:** Siddique Mohammad Saif
-    - **Vision:** To create a smart, secure, and user-friendly AI assistant (New AI) for everyone.
-    - **Technology:** This AI is powered by Groq's Llama models and Streamlit.
-    """)
+    st.write(f"**Developer:** Siddique Mohammad Saif")
 
 elif menu == "Feedback":
     st.header("📝 Feedback")
-    f_msg = st.text_area("How can we improve?")
-    if st.button("Submit"):
-        st.success("Thanks for feedback")
+    if st.button("Submit"): st.success("Thanks for feedback")
 
 elif menu == "Privacy Policy":
     st.header("🔒 Privacy Policy")
-    st.write("""
-    **Your Privacy Matters:**
-    1. New AI does not store your personal chat history on our permanent servers.
-    2. Your login credentials are encrypted within the session.
-    3. We do not share user data with any third-party advertising companies.
-    4. Your messages are processed securely via Groq Cloud APIs.
-    """)
+    st.write("Secure AI processing by New AI.")
 
 elif menu == "Terms & Conditions":
     st.header("⚖️ Terms & Conditions")
-    st.write("""
-    **Usage Rules:**
-    1. Do not use New AI for generating illegal or harmful content.
-    2. Respect the system boundaries and do not attempt to hack the application.
-    3. This AI is provided for educational and personal assistance purposes.
-    4. The creator, Siddique Mohammad Saif, is not responsible for any AI-generated misinformation.
-    """)
-    
+    st.write("Use New AI responsibly.")
+        
