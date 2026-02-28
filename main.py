@@ -52,22 +52,28 @@ if not st.session_state.logged_in:
                 else: st.warning("Username not found.")
     st.stop()
 
-# ================= PERMANENT SIDEBAR MENU =================
+# ================= PERMANENT SIDEBAR (SAB KUCH ISKE ANDAR HAI) =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 with st.sidebar:
-    st.title(f"👤 {st.session_state.current_user}")
-    # Ye options ab hamesha dikhenge
-    menu = st.radio("Menu Options", ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
+    st.title(f"🤖 New AI Menu")
+    st.write(f"User: **{st.session_state.current_user}**")
+    
+    # --- YEH RAHA AAPKA MENU JISE MAINE EK SELECTBOX MEIN DAAL DIYA HAI ---
+    menu = st.selectbox("📌 Menu", ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
     
     st.markdown("---")
+    
+    # Menu logic
     if menu == "About Creator":
+        st.subheader("About")
         st.info(f"👤 **Creator:** {CREATOR_NAME}")
     elif menu == "Feedback":
-        f_msg = st.text_area("Humein batayein:")
+        st.subheader("Feedback")
+        f_msg = st.text_area("Write your feedback:")
         if st.button("Submit Feedback"):
             try:
-                msg = MIMEText(f"Feedback from {st.session_state.current_user}: {f_msg}")
+                msg = MIMEText(f"Feedback: {f_msg}")
                 msg['Subject'] = 'New AI Feedback'
                 msg['From'] = MY_GMAIL
                 msg['To'] = MY_GMAIL
@@ -75,11 +81,13 @@ with st.sidebar:
                     server.login(MY_GMAIL, APP_PASS)
                     server.send_message(msg)
                 st.success("Thanks for feedback")
-            except: st.error("Error sending feedback")
+            except: st.error("Error")
     elif menu == "Privacy Policy":
-        st.write("🔒 Your privacy is our priority. No data is shared with third parties.")
+        st.subheader("Privacy")
+        st.write("🔒 Secure processing via Groq.")
     elif menu == "Terms & Conditions":
-        st.write("⚖️ Use this AI for educational and creative purposes. Avoid misuse.")
+        st.subheader("Terms")
+        st.write("⚖️ Use responsibly.")
     
     st.markdown("---")
     if st.button("Logout"):
@@ -87,8 +95,9 @@ with st.sidebar:
         st.rerun()
 
 # ================= WHATSAPP UI & CHAT SYSTEM =================
+# Chat sirf tab dikhega jab Menu mein 'Chat' selected ho
 if menu == "Chat":
-    st.title("🤖 New AI Chat")
+    st.title("🤖 Chat Screen")
     st.markdown("""
     <style>
         header, footer {visibility: hidden;}
@@ -101,20 +110,18 @@ if menu == "Chat":
     if "messages" not in st.session_state: 
         st.session_state.messages = []
 
-    # Instant display of messages
     for i, m in enumerate(st.session_state.messages):
         cls = "user-bubble" if m["role"] == "user" else "ai-bubble"
         st.markdown(f'<div class="{cls}">{m["content"]}</div>', unsafe_allow_html=True)
 
-    u_input = st.chat_input("Siddique Mohammad Saif ka AI ready hai...")
+    u_input = st.chat_input("Ask something...")
     if u_input:
         st.session_state.messages.append({"role": "user", "content": u_input})
-        # Identity logic
-        sys = f"Your name is New AI. You were created by {CREATOR_NAME}. Answer strictly as this persona."
+        sys = f"Your name is New AI. You were created by {CREATOR_NAME}."
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
             messages=[{"role": "system", "content": sys}, {"role": "user", "content": u_input}]
         )
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
         st.rerun()
-            
+        
