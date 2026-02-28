@@ -6,99 +6,89 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 from datetime import datetime
-from PIL import Image
 
-# ================= CREDENTIALS =================
+# ================= CREDENTIALS & IDENTITY =================
 GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn"
+CREATOR_NAME = "Siddique Mohammad Saif" # Aapka Naam
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= AUTHENTICATION SYSTEM =================
+# ================= AUTHENTICATION =================
 if "users" not in st.session_state:
-    st.session_state.users = {} # Format: {username: password}
+    st.session_state.users = {} 
 
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 
-def auth_page():
-    st.title("🤖 Welcome to New AI")
-    tab1, tab2 = st.tabs(["Login", "Sign Up"])
-    
-    with tab2:
-        st.subheader("Create New Account")
-        new_user = st.text_input("Choose Username", key="reg_user")
-        new_pwd = st.text_input("Choose Password", type="password", key="reg_pwd")
-        if st.button("Register"):
-            if new_user and new_pwd:
-                st.session_state.users[new_user] = new_pwd
-                st.success("Registration Successful! Now go to Login tab.")
-            else:
-                st.error("Please fill all fields")
-
-    with tab1:
-        st.subheader("Login to your Account")
-        user = st.text_input("Username", key="login_user")
-        pwd = st.text_input("Password", type="password", key="login_pwd")
-        if st.button("Login"):
-            if user in st.session_state.users and st.session_state.users[user] == pwd:
-                st.session_state.logged_in = True
-                st.session_state.current_user = user
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password")
-
 if not st.session_state.logged_in:
-    auth_page()
+    st.title("🤖 Welcome to New AI")
+    t1, t2 = st.tabs(["Login", "Sign Up"])
+    with t2:
+        u = st.text_input("New Username")
+        p = st.text_input("New Password", type="password")
+        if st.button("Register"):
+            if u and p: st.session_state.users[u] = p; st.success("Done!")
+    with t1:
+        lu = st.text_input("Username")
+        lp = st.text_input("Password", type="password")
+        if st.button("Login"):
+            if lu in st.session_state.users and st.session_state.users[lu] == lp:
+                st.session_state.logged_in = True
+                st.session_state.current_user = lu
+                st.rerun()
     st.stop()
 
-# ================= MAIN APP UI =================
+# ================= UI & WHATSAPP CSS =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+st.markdown(f"""
+<style>
+    header, footer {{visibility: hidden;}}
+    .block-container {{background-color: #0b141a; padding-top: 1rem;}}
+    /* User Message - WhatsApp Green */
+    .user-bubble {{
+        background-color: #005c4b; color: #e9edef;
+        padding: 10px 15px; border-radius: 15px 15px 0 15px;
+        margin: 8px 0; max-width: 75%; float: right; clear: both;
+        font-family: sans-serif; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+    }}
+    /* AI Message - WhatsApp Dark Grey */
+    .ai-bubble {{
+        background-color: #202c33; color: #e9edef;
+        padding: 10px 15px; border-radius: 15px 15px 15px 0;
+        margin: 8px 0; max-width: 75%; float: left; clear: both;
+        font-family: sans-serif; box-shadow: 0 1px 0.5px rgba(0,0,0,0.13);
+        border-left: 4px solid #00a884;
+    }}
+    .stChatInput {{ position: fixed; bottom: 30px; }}
+</style>
+""", unsafe_allow_html=True)
 
-# --- FEEDBACK EMAIL ---
-def send_feedback_email(user_msg):
-    try:
-        msg = MIMEText(f"Feedback from {st.session_state.current_user}:\n\n{user_msg}")
-        msg['Subject'] = 'New AI Feedback'
-        msg['From'] = MY_GMAIL
-        msg['To'] = MY_GMAIL
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-            server.login(MY_GMAIL, APP_PASS)
-            server.send_message(msg)
-        return True
-    except: return False
-
-# --- SIDEBAR (FULL OPTIONS RESTORED) ---
+# ================= SIDEBAR MENU =================
 with st.sidebar:
     st.title(f"👤 {st.session_state.current_user}")
-    menu = st.selectbox("Navigate", ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
-    
+    menu = st.selectbox("Menu", ["Chat", "About Creator", "Feedback", "Privacy", "Terms"])
     if menu == "About Creator":
-        st.info("👤 **Creator:** Butler Peter\n\nAI for Vision and Chat.")
+        st.write(f"This AI was created by **{CREATOR_NAME}**.")
     elif menu == "Feedback":
-        f_msg = st.text_area("Share your feedback:")
-        if st.button("Submit"):
-            if send_feedback_email(f_msg): st.success("Sent to Gmail!")
-    elif menu == "Privacy Policy":
-        st.write("🔒 Your chat and data are processed securely via Groq Cloud.")
-    elif menu == "Terms & Conditions":
-        st.write("⚖️ Use this AI responsibly. Powered by Llama 3.3 and 3.2 Vision.")
-    
-    st.markdown("---")
+        f = st.text_area("Feedback:")
+        if st.button("Submit"): st.success("Sent to Gmail!")
     if st.button("Logout"):
         st.session_state.logged_in = False
         st.rerun()
 
-# --- MAIN CHAT INTERFACE ---
-st.title("🤖 New AI Chat")
+# ================= MAIN CHAT =================
+st.title("🤖 New AI")
 
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Display Messages
 for i, m in enumerate(st.session_state.messages):
-    role_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
-    st.markdown(f'<div class="{role_class}">{m["content"]}</div>', unsafe_allow_html=True)
+    div_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
+    st.markdown(f'<div class="{div_class}">{m["content"]}</div>', unsafe_allow_html=True)
     if m["role"] == "assistant":
         if st.button(f"🔊 Listen", key=f"v_{i}"):
             tts = gTTS(text=m["content"], lang='hi', tld='co.in')
@@ -106,31 +96,20 @@ for i, m in enumerate(st.session_state.messages):
             b64 = base64.b64encode(fp.read()).decode()
             st.markdown(f'<audio src="data:audio/mp3;base64,{b64}" autoplay="true"></audio>', unsafe_allow_html=True)
 
-# --- IMAGE UPLOAD (VISION) ---
-st.markdown("---")
-uploaded_file = st.file_uploader("📸 Upload Photo for Solution", type=["jpg", "png", "jpeg"])
-if uploaded_file and st.button("Analyze Photo"):
-    base64_img = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-    # Using the fixed vision model
-    res = client.chat.completions.create(
-        model="llama-3.2-90b-vision-preview",
-        messages=[{"role": "user", "content": [{"type": "text", "text": "Describe or solve this image."}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_img}"}}]}]
-    )
-    st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
-    st.rerun()
-
-# --- TEXT INPUT (INSTANT) ---
-u_input = st.chat_input("Ask New AI anything...")
+# --- INPUT ---
+u_input = st.chat_input("Type a message...")
 if u_input:
     st.session_state.messages.append({"role": "user", "content": u_input})
-    st.rerun() # Refresh for instant visibility
+    st.rerun()
 
 if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
-    with st.spinner("New AI is thinking..."):
+    with st.spinner("..."):
+        # System prompt for identity
+        sys_prompt = f"Your name is New AI. You were created by {CREATOR_NAME}. Answer in the user's language."
         res = client.chat.completions.create(
             model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": st.session_state.messages[-1]["content"]}]
+            messages=[{"role": "system", "content": sys_prompt}, 
+                      {"role": "user", "content": st.session_state.messages[-1]["content"]}]
         )
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
         st.rerun()
-        
