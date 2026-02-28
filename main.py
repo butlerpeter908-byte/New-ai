@@ -6,7 +6,7 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 
-# ================= 1. IDENTITY & CREDENTIALS =================
+# ================= 1. IDENTITY & FAST CREDENTIALS =================
 GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn"
@@ -22,7 +22,7 @@ if "logged_in" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= 3. APP CONFIG & LOGIN =================
+# ================= 3. APP CONFIG =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 if not st.session_state.logged_in:
@@ -56,35 +56,25 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-# ================= 5. UPDATED FEEDBACK SECTION =================
+# ================= 5. FEEDBACK SECTION =================
 if menu == "Feedback":
     st.header("📝 Submit Your Feedback")
-    
-    # Feedback Input Box
-    user_feedback = st.text_area("Write your message here...", height=150, placeholder="Your thoughts...")
-    
+    user_feedback = st.text_area("Write your message here...", height=150)
     if st.button("Submit"):
         if user_feedback:
             try:
-                # Email Setup
                 msg = MIMEText(f"User: {st.session_state.current_user}\nFeedback: {user_feedback}")
-                msg['Subject'] = f"New AI Feedback"
+                msg['Subject'] = "New AI Feedback"
                 msg['From'] = MY_GMAIL
                 msg['To'] = MY_GMAIL
-                
-                # SMTP Send
                 with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
                     server.login(MY_GMAIL, APP_PASS)
                     server.send_message(msg)
-                
-                # Simple Success Message as requested
                 st.success("Thanks for feedback") 
-            except Exception:
-                st.error("Error sending feedback.")
-        else:
-            st.warning("Please enter your message first.")
+            except Exception: st.error("Error sending feedback.")
+        else: st.warning("Please enter your message first.")
 
-# ================= 6. CHAT & OTHER PAGES =================
+# ================= 6. QUICK RESPONSE CHAT =================
 elif menu == "Chat":
     st.title("💬 New AI")
     st.markdown("""<style>.user-bubble { background-color: #005c4b; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: right; clear: both; } .ai-bubble { background-color: #202c33; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: left; clear: both; border-left: 4px solid #00a884; }</style>""", unsafe_allow_html=True)
@@ -101,8 +91,15 @@ elif menu == "Chat":
     q = st.chat_input("Welcome to new ai")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        res = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "system", "content": f"Your name is New AI. Created by {CREATOR_NAME}."}, {"role": "user", "content": q}])
-        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content}); st.rerun()
+        
+        # Using Llama-3.1-8b-instant for zero-wait quick response
+        res = client.chat.completions.create(
+            model="llama-3.1-8b-instant", 
+            messages=[{"role": "system", "content": f"Your name is New AI. Created by {CREATOR_NAME}."}, {"role": "user", "content": q}],
+            temperature=0.5
+        )
+        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
+        st.rerun()
 
 elif menu == "About Creator":
     st.header("👤 About Creator")
@@ -110,8 +107,9 @@ elif menu == "About Creator":
 
 elif menu == "Privacy Policy":
     st.header("🔒 Privacy Policy")
-    st.write("Your feedback and messages are handled securely.")
+    st.write("English Privacy details here...")
 
 elif menu == "Terms & Conditions":
     st.header("⚖️ Terms & Conditions")
-    st.write("Usage of New AI is subject to fair use policies.")
+    st.write("English Terms details here...")
+    
