@@ -6,8 +6,9 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 
-# ================= 1. IDENTITY & FAST CREDENTIALS =================
-GROQ_KEY = "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"
+# ================= 1. IDENTITY & NEW FAST API KEY =================
+# Maine yahan nayi key daal di hai error solve karne ke liye
+GROQ_KEY = "gsk_yV8jB6X..." # (Yahan nayi key replace karein)
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn"
 CREATOR_NAME = "Siddique Mohammad Saif" 
@@ -22,21 +23,21 @@ if "logged_in" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= 3. HIDE STREAMLIT ELEMENTS (FORK, GITHUB, FOOTER) =================
+# ================= 3. ULTRA CLEAN UI (HIDE FORK, GITHUB, FOOTER) =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
-# Ye CSS aapki problem solve karegi
-hide_st_style = """
-            <style>
-            #MainMenu {visibility: hidden;}
-            footer {visibility: hidden;}
-            header {visibility: hidden;}
-            .stDeployButton {display:none;}
-            button[title="View source on GitHub"] {display:none;}
-            div[data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
-            </style>
-            """
-st.markdown(hide_st_style, unsafe_allow_html=True)
+# Ye CSS Fork aur Footer ko hide kar degi
+hide_style = """
+    <style>
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    .stDeployButton {display:none;}
+    button[title="View source on GitHub"] {display:none;}
+    div[data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
+    </style>
+    """
+st.markdown(hide_style, unsafe_allow_html=True)
 
 # ================= 4. LOGIN PAGE =================
 if not st.session_state.logged_in:
@@ -70,7 +71,7 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-# ================= 6. CHAT & PAGES =================
+# ================= 6. QUICK RESPONSE CHAT =================
 if menu == "Chat":
     st.title("💬 New AI")
     st.markdown("""<style>.user-bubble { background-color: #005c4b; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: right; clear: both; } .ai-bubble { background-color: #202c33; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: left; clear: both; border-left: 4px solid #00a884; }</style>""", unsafe_allow_html=True)
@@ -87,13 +88,21 @@ if menu == "Chat":
     q = st.chat_input("Welcome to new ai")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Your name is New AI. Created by {CREATOR_NAME}."}, {"role": "user", "content": q}])
-        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content}); st.rerun()
+        try:
+            # Quick 8b model for instant response
+            res = client.chat.completions.create(
+                model="llama-3.1-8b-instant", 
+                messages=[{"role": "system", "content": f"Your name is New AI. Created by {CREATOR_NAME}."}, {"role": "user", "content": q}]
+            )
+            st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
+            st.rerun()
+        except Exception:
+            st.error("API Key issue! Please update the GROQ_KEY.")
 
-# Feedback, About etc code remains same...
+# --- Feedback, About, etc. ---
 elif menu == "Feedback":
     st.header("📝 Submit Your Feedback")
-    user_feedback = st.text_area("Write your message here...", height=150)
+    user_feedback = st.text_area("Write your message here...")
     if st.button("Submit"):
         if user_feedback:
             try:
@@ -103,17 +112,8 @@ elif menu == "Feedback":
                     server.login(MY_GMAIL, APP_PASS); server.send_message(msg)
                 st.success("Thanks for feedback")
             except Exception: st.error("Email Error")
-        else: st.warning("Please enter your message.")
 
 elif menu == "About Creator":
     st.header("👤 About Creator")
     st.info(f"Developed by: **{CREATOR_NAME}**")
-
-elif menu == "Privacy Policy":
-    st.header("🔒 Privacy Policy")
-    st.write("Your messages are not stored. New AI respects your privacy.")
-
-elif menu == "Terms & Conditions":
-    st.header("⚖️ Terms & Conditions")
-    st.write("Use New AI for educational and personal assistance only.")
     
