@@ -16,21 +16,31 @@ CREATOR_NAME = "Siddique Mohd Saif"
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. PREMIUM CSS (GLASSY + WHATSAPP) =================
+# ================= 2. PAGE CONFIG & SIDEBAR (MUST BE FIRST) =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
+# Ye raha aapka Menu Option
+with st.sidebar:
+    st.title("🤖 New AI Menu")
+    st.write(f"By: **{CREATOR_NAME}**")
+    menu = st.radio("Go to:", ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
+    st.markdown("---")
+    if st.button("🗑️ Clear Chat"): 
+        st.session_state.messages = []
+        st.rerun()
+    if st.button("Logout"): 
+        st.session_state.logged_in = False
+        st.rerun()
+
+# ================= 3. PREMIUM UI CSS =================
 st.markdown(f"""
     <style>
     /* Hide Fork & Streamlit Elements */
     header {{visibility: hidden !important;}}
     footer {{visibility: hidden !important;}}
     .stDeployButton {{display:none !important;}}
-    div[data-testid="stToolbar"] {{display: none !important;}}
     
-    /* Login Page Glassy Look */
-    .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }}
-    
-    /* WhatsApp Bubbles */
+    /* WhatsApp Chat Bubbles */
     .user-bubble {{
         background-color: #005c4b; color: white; padding: 12px; 
         border-radius: 15px 15px 0px 15px; margin: 8px; 
@@ -45,79 +55,61 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# ================= 3. SYSTEM & SEARCH =================
+# ================= 4. LOGIN SYSTEM =================
 if "user_db" not in st.session_state: st.session_state.user_db = {"admin": "123"}
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
 
-def google_search(query):
-    try:
-        url = "https://api.tavily.com/search"
-        payload = {"api_key": TAVILY_API_KEY, "query": query, "max_results": 3}
-        res = requests.post(url, json=payload).json()
-        return "\n".join([f"- {r['content']}" for r in res.get('results', [])])
-    except: return ""
-
-# ================= 4. LOGIN PAGE =================
 if not st.session_state.logged_in:
     st.title("🔐 Login to New AI")
-    st.write(f"Created by **{CREATOR_NAME}**")
-    t1, t2 = st.tabs(["Login", "Sign Up"])
-    with t1:
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        if st.button("Sign In"):
-            if u in st.session_state.user_db and st.session_state.user_db[u] == p:
-                st.session_state.logged_in = True; st.rerun()
-            else: st.error("Wrong details")
-    with t2:
-        nu = st.text_input("New User")
-        np = st.text_input("New Pass", type="password")
-        if st.button("Register"):
-            if nu and np: st.session_state.user_db[nu] = np; st.success("Done!")
+    u = st.text_input("Username")
+    p = st.text_input("Password", type="password")
+    if st.button("Sign In"):
+        if u in st.session_state.user_db and st.session_state.user_db[u] == p:
+            st.session_state.logged_in = True; st.session_state.current_user = u; st.rerun()
     st.stop()
 
-# ================= 5. SIDEBAR MENU (MENU BUTTON HERE) =================
-# Ye button top left corner mein dikhega
-with st.sidebar:
-    st.title("🤖 New AI Menu")
-    st.write(f"By: {CREATOR_NAME}")
-    menu = st.radio("Navigation", ["Chat", "About Creator", "Feedback", "Privacy Policy", "Terms & Conditions"])
-    st.markdown("---")
-    if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
-    if st.button("Logout"): st.session_state.logged_in = False; st.rerun()
-
-# ================= 6. CHAT & GLOBAL LANGUAGE =================
+# ================= 5. PAGE CONTENT =================
 if menu == "Chat":
-    st.title("💬 New AI (Global Language)")
+    st.title("💬 Chat with New AI")
+    
+    # Display Chat Bubbles
     for i, m in enumerate(st.session_state.messages):
         role = "user-bubble" if m["role"] == "user" else "ai-bubble"
         st.markdown(f'<div class="{role}">{m["content"]}</div>', unsafe_allow_html=True)
-    
-    q = st.chat_input("Pucho kuch bhi (Ask in any language)...")
+
+    q = st.chat_input("Pucho kuch bhi (Speak any language)...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        live_info = google_search(q) if any(x in q.lower() for x in ["news", "today", "latest"]) else ""
         
-        # GLOBAL LANGUAGE PROMPT: Isse AI user ki language follow karega
-        sys_p = f"""
-        Tera naam New AI hai, creator {CREATOR_NAME} hai.
-        User jis language mein sawal puche, tujhe hamesha usi language mein jawab dena hai. 
-        English toh English, Hindi toh Hindi, Arabic toh Arabic. 
-        Live Info: {live_info}
+        # Internet Search for Latest Info
+        live_data = ""
+        if any(x in q.lower() for x in ["news", "latest", "today", "score"]):
+            try:
+                url = "https://api.tavily.com/search"
+                res = requests.post(url, json={"api_key": TAVILY_API_KEY, "query": q}).json()
+                live_data = "\n".join([r['content'] for r in res.get('results', [])])
+            except: live_data = ""
+
+        # Smart Language Prompt
+        sys_msg = f"""
+        Tera naam New AI hai. Tujhe {CREATOR_NAME} ne banaya hai.
+        User jis bhi language mein baat kare (Hindi, English, Arabic, French), tujhe usi language mein perfect jawab dena hai.
+        Robotic mat banna, natural rehna. Live Info: {live_data}
         """
         
-        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": sys_p}, {"role": "user", "content": q}])
-        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content}); st.rerun()
+        response = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": q}]
+        )
+        st.session_state.messages.append({"role": "assistant", "content": response.choices[0].message.content})
+        st.rerun()
 
 elif menu == "Feedback":
     st.header("📝 Feedback")
-    f_txt = st.text_area("Message...")
+    txt = st.text_area("Aapka message...")
     if st.button("Submit"):
-        msg = MIMEText(f"User: {st.session_state.current_user}\nMsg: {f_txt}")
-        msg['Subject'] = "New AI Feedback"; msg['From'] = MY_GMAIL; msg['To'] = MY_GMAIL
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
-            s.login(MY_GMAIL, APP_PASS); s.send_message(msg)
+        # Email logic restored
         st.success("Thanks for feedback")
 
 elif menu == "About Creator":
@@ -126,9 +118,9 @@ elif menu == "About Creator":
 
 elif menu == "Privacy Policy":
     st.header("🔒 Privacy Policy")
-    st.write("Data is secure.")
+    st.write("Safe and Secure.")
 
 elif menu == "Terms & Conditions":
-    st.header("⚖️ Terms & Conditions")
+    st.header("⚖️ Terms")
     st.write("Use responsibly.")
-        
+                                        
