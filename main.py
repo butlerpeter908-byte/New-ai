@@ -6,9 +6,9 @@ import io
 import smtplib
 from email.mime.text import MIMEText
 
-# ================= 1. IDENTITY & NEW FAST API KEY =================
-# Maine yahan nayi key daal di hai error solve karne ke liye
-GROQ_KEY = "gsk_yV8jB6X..." # (Yahan nayi key replace karein)
+# ================= 1. IDENTITY & NEW API KEY =================
+# Aapki nayi working API key yahan set hai
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn"
 CREATOR_NAME = "Siddique Mohammad Saif" 
@@ -23,21 +23,21 @@ if "logged_in" not in st.session_state:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# ================= 3. ULTRA CLEAN UI (HIDE FORK, GITHUB, FOOTER) =================
+# ================= 3. HIDE ALL STREAMLIT TRASH (FORK/FOOTER/GITHUB) =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
-# Ye CSS Fork aur Footer ko hide kar degi
-hide_style = """
-    <style>
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-    .stDeployButton {display:none;}
-    button[title="View source on GitHub"] {display:none;}
-    div[data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
-    </style>
-    """
-st.markdown(hide_style, unsafe_allow_html=True)
+# Ye CSS sab kuch hide kar degi taaki app professional lage
+hide_st_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            .stDeployButton {display:none;}
+            button[title="View source on GitHub"] {display:none;}
+            div[data-testid="stToolbar"] {visibility: hidden !important; display: none !important;}
+            </style>
+            """
+st.markdown(hide_st_style, unsafe_allow_html=True)
 
 # ================= 4. LOGIN PAGE =================
 if not st.session_state.logged_in:
@@ -52,6 +52,12 @@ if not st.session_state.logged_in:
                 st.session_state.current_user = u
                 st.rerun()
             else: st.error("Invalid Login")
+        
+        if st.button("Forgot Password?"):
+            if u in st.session_state.user_db:
+                st.info(f"Hi {u}, your password is: **{st.session_state.user_db[u]}**")
+            else: st.error("Username not found.")
+            
     with t2:
         nu = st.text_input("New Username", key="s_u")
         np = st.text_input("New Password", type="password", key="s_p")
@@ -71,7 +77,7 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.rerun()
 
-# ================= 6. QUICK RESPONSE CHAT =================
+# ================= 6. CHAT & PAGES =================
 if menu == "Chat":
     st.title("💬 New AI")
     st.markdown("""<style>.user-bubble { background-color: #005c4b; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: right; clear: both; } .ai-bubble { background-color: #202c33; color: white; padding: 10px; border-radius: 10px; margin: 5px; float: left; clear: both; border-left: 4px solid #00a884; }</style>""", unsafe_allow_html=True)
@@ -89,7 +95,7 @@ if menu == "Chat":
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         try:
-            # Quick 8b model for instant response
+            # Quick Response Model 🚀
             res = client.chat.completions.create(
                 model="llama-3.1-8b-instant", 
                 messages=[{"role": "system", "content": f"Your name is New AI. Created by {CREATOR_NAME}."}, {"role": "user", "content": q}]
@@ -97,9 +103,8 @@ if menu == "Chat":
             st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
             st.rerun()
         except Exception:
-            st.error("API Key issue! Please update the GROQ_KEY.")
+            st.error("Something went wrong. Please check API settings.")
 
-# --- Feedback, About, etc. ---
 elif menu == "Feedback":
     st.header("📝 Submit Your Feedback")
     user_feedback = st.text_area("Write your message here...")
@@ -116,4 +121,12 @@ elif menu == "Feedback":
 elif menu == "About Creator":
     st.header("👤 About Creator")
     st.info(f"Developed by: **{CREATOR_NAME}**")
-    
+
+elif menu == "Privacy Policy":
+    st.header("🔒 Privacy Policy")
+    st.write("Privacy Policy details in English...")
+
+elif menu == "Terms & Conditions":
+    st.header("⚖️ Terms & Conditions")
+    st.write("Usage terms and conditions...")
+        
