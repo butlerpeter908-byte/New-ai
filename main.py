@@ -11,31 +11,32 @@ APP_PASS = "rkpi toiq sdgj vfvn"
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. MOBILE-OPTIMIZED UI CSS =================
+# ================= 2. ULTRA-VISIBLE UI CSS =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 st.markdown(f"""
     <style>
-    /* Removing Top Space */
-    .block-container {{ padding-top: 1rem !important; }}
+    .block-container {{ padding-top: 2rem !important; }}
     header, footer {{visibility: hidden !important;}}
     .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }}
 
-    /* FIXED MOBILE MENU BUTTON (Adjusted Margins) */
+    /* NEON SUPER MENU BUTTON */
     button[data-testid="stSidebarCollapse"] {{
-        background-color: #00a884 !important;
-        color: white !important;
-        border-radius: 8px !important;
+        background-color: #00ff88 !important; /* Neon Green */
+        color: #000000 !important;        /* Black Icon */
+        border-radius: 12px !important;
         position: fixed !important;
-        top: 20px !important;    /* Thoda neeche kiya */
-        left: 20px !important;   /* Thoda right side margin di */
+        top: 30px !important;    /* Kafi neeche */
+        left: 25px !important;   /* Margin badha di */
         z-index: 999999 !important;
-        padding: 10px !important;
+        width: 60px !important;  /* Bada size */
+        height: 50px !important;
+        box-shadow: 0px 0px 15px #00ff88 !important; /* Glowing effect */
         display: block !important;
     }}
 
     /* WhatsApp Bubbles */
-    .chat-container {{ display: flex; flex-direction: column; gap: 10px; padding: 10px; }}
+    .chat-container {{ display: flex; flex-direction: column; gap: 10px; padding: 15px; }}
     .user-bubble {{
         background-color: #005c4b; color: white; padding: 12px; 
         border-radius: 15px 15px 0px 15px; margin: 5px; 
@@ -55,43 +56,43 @@ if "user_db" not in st.session_state: st.session_state.user_db = {"admin": "123"
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
 
-# --- LOGIN / SIGN UP PAGE ---
+# --- LOGIN / SIGN UP ---
 if not st.session_state.logged_in:
-    st.markdown('<div style="padding-top: 60px; text-align: center;">', unsafe_allow_html=True)
-    st.title("🔐 Welcome to New AI")
-    t1, t2 = st.tabs(["🔑 Login", "📝 Sign Up"])
+    st.markdown('<div style="padding-top: 80px; text-align: center; color:white;">', unsafe_allow_html=True)
+    st.title("🔐 New AI Login")
+    t1, t2 = st.tabs(["🔑 Sign In", "📝 Create Account"])
     with t1:
-        u = st.text_input("Username", key="l_u")
-        p = st.text_input("Password", type="password", key="l_p")
-        if st.button("Sign In", use_container_width=True):
+        u = st.text_input("Username")
+        p = st.text_input("Password", type="password")
+        if st.button("Login Now", use_container_width=True):
             if u in st.session_state.user_db and st.session_state.user_db[u] == p:
                 st.session_state.logged_in = True; st.session_state.current_user = u; st.rerun()
     with t2:
-        nu = st.text_input("New Username", key="s_u")
-        np = st.text_input("New Password", type="password", key="s_p")
+        nu = st.text_input("New Username")
+        np = st.text_input("New Password", type="password")
         if st.button("Register", use_container_width=True):
-            st.session_state.user_db[nu] = np; st.success("Account Created!")
+            st.session_state.user_db[nu] = np; st.success("Done!")
     st.stop()
 
 # ================= 4. SIDEBAR MENU (POST-LOGIN) =================
 with st.sidebar:
-    st.title("🤖 New AI Menu")
-    st.write(f"User: **{st.session_state.current_user}**")
-    menu = st.radio("Navigation", ["💬 Chat", "👤 About Creator", "📩 Feedback", "🛡️ Privacy Policy", "📄 Terms"])
+    st.title("🤖 New AI Settings")
+    st.write(f"Logged as: **{st.session_state.current_user}**")
+    menu = st.radio("Go to:", ["💬 Chat", "👤 About Creator", "📩 Feedback", "🛡️ Privacy", "📄 Terms"])
     st.markdown("---")
-    if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
+    if st.button("🗑️ Clear History"): st.session_state.messages = []; st.rerun()
     if st.button("Logout"): st.session_state.logged_in = False; st.rerun()
 
-# ================= 5. PAGE CONTENT =================
+# ================= 5. CONTENT =================
 if menu == "💬 Chat":
-    st.markdown('<div style="color:white; text-align:center; padding-top:30px;"><h3>🤖 Welcome to New AI</h3></div>', unsafe_allow_html=True)
+    st.markdown('<div style="color:white; text-align:center; margin-top:50px;"><h3>🤖 Welcome to New AI</h3></div>', unsafe_allow_html=True)
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for m in st.session_state.messages:
         role = "user-bubble" if m["role"] == "user" else "ai-bubble"
         st.markdown(f'<div class="{role}">{m["content"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    q = st.chat_input("Message New AI...")
+    q = st.chat_input("Ask something...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "user", "content": q}])
@@ -100,22 +101,23 @@ if menu == "💬 Chat":
 
 elif menu == "📩 Feedback":
     st.header("📩 Feedback")
-    fb_text = st.text_area("Tell us what you think...")
-    if st.button("Submit"):
+    fb = st.text_area("Message:")
+    if st.button("Submit to Siddique"):
         try:
-            msg = MIMEText(f"Feedback: {fb_text}"); msg['Subject'] = 'New AI Feedback'; msg['From'] = MY_GMAIL; msg['To'] = MY_GMAIL
+            msg = MIMEText(fb); msg['Subject']='New AI Feedback'; msg['From']=MY_GMAIL; msg['To']=MY_GMAIL
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s: s.login(MY_GMAIL, APP_PASS); s.send_message(msg)
-            st.success("Sent to Siddique's Gmail! ✅")
-        except: st.error("Email Error.")
+            st.success("Sent! ✅")
+        except: st.error("Error.")
 
-elif menu == "🛡️ Privacy Policy":
+elif menu == "🛡️ Privacy":
     st.header("🛡️ Privacy Policy")
-    st.write("Professional English Privacy Content: We respect your data security.")
+    st.write("Your data is safe and not shared with third parties.")
 
 elif menu == "📄 Terms":
-    st.header("📄 Terms")
-    st.write("Professional English Terms Content: Use responsibly.")
+    st.header("📄 Terms of Use")
+    st.write("Use this AI responsibly for legal purposes only.")
 
 elif menu == "👤 About Creator":
     st.header("👤 About")
-    st.info(f"Built with ❤️ by **{CREATOR_NAME}**")
+    st.info(f"Created by: **{CREATOR_NAME}**")
+            
