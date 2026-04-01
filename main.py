@@ -1,139 +1,119 @@
 import streamlit as st
 from groq import Groq
-import requests
+import smtplib
+from email.mime.text import MIMEText
 
-# ================= 1. IDENTITY & KEYS =================
+# ================= 1. IDENTITY & CREDENTIALS =================
 GROQ_KEY = "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"
-TAVILY_API_KEY = "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"
-CREATOR_NAME = "Siddique Mohd Saif" 
+CREATOR_NAME = "Siddique Mohd Saif"
+MY_GMAIL = "butlerpeter908@gmail.com"
+APP_PASS = "rkpi toiq sdgj vfvn" # Your App Password
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. PREMIUM UI CSS (NO BLANK SPACE) =================
+# ================= 2. UI & WHATSAPP STYLING =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 st.markdown(f"""
     <style>
-    /* Removing Top Blank Space */
     .block-container {{ padding-top: 0rem !important; }}
     header, footer {{visibility: hidden !important;}}
-    
-    /* Dark Glassy Theme */
-    .stApp {{
-        background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
-    }}
+    .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }}
 
-    /* WhatsApp Style Chat Bubbles (Right/Left Alignment) */
-    .chat-container {{
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }}
+    /* WhatsApp Bubbles */
+    .chat-container {{ display: flex; flex-direction: column; gap: 10px; }}
     .user-bubble {{
-        background-color: #005c4b; 
-        color: white; 
-        padding: 12px; 
-        border-radius: 15px 15px 0px 15px; 
-        margin: 5px; 
-        align-self: flex-end; /* User on Right */
-        max-width: 80%;
+        background-color: #005c4b; color: white; padding: 12px; 
+        border-radius: 15px 15px 0px 15px; margin: 5px; 
+        align-self: flex-end; max-width: 80%;
     }}
     .ai-bubble {{
-        background-color: #202c33; 
-        color: white; 
-        padding: 12px; 
-        border-radius: 15px 15px 15px 0px; 
-        margin: 5px; 
-        align-self: flex-start; /* AI on Left */
-        max-width: 80%;
+        background-color: #202c33; color: white; padding: 12px; 
+        border-radius: 15px 15px 15px 0px; margin: 5px; 
+        align-self: flex-start; max-width: 80%;
         border-left: 4px solid #00a884;
-    }}
-
-    .welcome-header {{
-        font-size: 1.5rem; font-weight: bold; color: #ffffff;
-        text-align: center; margin-top: 20px; padding: 15px;
-        background: rgba(255, 255, 255, 0.05); border-radius: 10px;
     }}
     </style>
     """, unsafe_allow_html=True)
 
-# ================= 3. PERSISTENT LOGIN LOGIC =================
-if "user_db" not in st.session_state: 
-    st.session_state.user_db = {"admin": "123"} # Default User
+# ================= 3. LOGIC & SESSIONS =================
+if "user_db" not in st.session_state: st.session_state.user_db = {"admin": "123"}
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "messages" not in st.session_state: st.session_state.messages = []
 
-if "logged_in" not in st.session_state: 
-    st.session_state.logged_in = False
-
-if "messages" not in st.session_state: 
-    st.session_state.messages = []
-
-# ================= 4. LOGIN & SIGN UP TABS =================
+# --- LOGIN / SIGN UP ---
 if not st.session_state.logged_in:
     st.markdown('<div style="padding-top: 50px; text-align: center;">', unsafe_allow_html=True)
     st.title("🔐 Welcome to New AI")
-    st.write(f"Developed by {CREATOR_NAME}")
-    
-    # Dono options: Login aur Sign Up
-    tab_login, tab_signup = st.tabs(["🔑 Login", "📝 Sign Up"])
-    
-    with tab_login:
-        u = st.text_input("Username", key="login_u")
-        p = st.text_input("Password", type="password", key="login_p")
+    t1, t2 = st.tabs(["🔑 Login", "📝 Sign Up"])
+    with t1:
+        u = st.text_input("Username", key="l_u")
+        p = st.text_input("Password", type="password", key="l_p")
         if st.button("Sign In", use_container_width=True):
             if u in st.session_state.user_db and st.session_state.user_db[u] == p:
-                st.session_state.logged_in = True
-                st.session_state.current_user = u
-                st.rerun()
-            else:
-                st.error("Galt Username ya Password hai bhai!")
-
-    with tab_signup:
-        nu = st.text_input("Choose Username", key="sign_u")
-        np = st.text_input("Choose Password", type="password", key="sign_p")
-        if st.button("Create Account", use_container_width=True):
-            if nu and np:
-                st.session_state.user_db[nu] = np
-                st.success("Account ban gaya! Ab Login tab par jaakar sign in karo.")
-            else:
-                st.warning("Details toh bharo pehle!")
-    
-    st.markdown('</div>', unsafe_allow_html=True)
+                st.session_state.logged_in = True; st.session_state.current_user = u; st.rerun()
+    with t2:
+        nu = st.text_input("New Username", key="s_u")
+        np = st.text_input("New Password", type="password", key="s_p")
+        if st.button("Register", use_container_width=True):
+            st.session_state.user_db[nu] = np; st.success("Account Created!")
     st.stop()
 
-# ================= 5. MAIN CHAT PAGE (AFTER LOGIN) =================
-# Sidebar Menu
+# ================= 4. SIDEBAR MENU (POST-LOGIN) =================
 with st.sidebar:
     st.title("🤖 New AI Menu")
-    st.write(f"Logged in as: **{st.session_state.current_user}**")
-    menu = st.radio("Navigation", ["Chat", "About Creator", "Feedback"])
+    menu = st.radio("Navigation", ["💬 Chat", "👤 About Creator", "📩 Feedback", "🛡️ Privacy Policy", "📄 Terms"])
     st.markdown("---")
-    # Jab tak ispe click nahi karoge, login rahega
-    if st.button("Logout"): 
-        st.session_state.logged_in = False
-        st.rerun()
+    if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
+    if st.button("Logout"): st.session_state.logged_in = False; st.rerun()
 
-if menu == "Chat":
-    st.markdown('<div class="welcome-header">🤖 Welcome to New AI</div>', unsafe_allow_html=True)
-    
-    # WhatsApp Layout
+# ================= 5. PROFESSIONAL ENGLISH PAGES =================
+if menu == "💬 Chat":
+    st.markdown('<div style="color:white; text-align:center; padding:10px;"><h3>🤖 New AI Session</h3></div>', unsafe_allow_html=True)
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for m in st.session_state.messages:
-        role_class = "user-bubble" if m["role"] == "user" else "ai-bubble"
-        st.markdown(f'<div class="{role_class}">{m["content"]}</div>', unsafe_allow_html=True)
+        role = "user-bubble" if m["role"] == "user" else "ai-bubble"
+        st.markdown(f'<div class="{role}">{m["content"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
-
-    q = st.chat_input("Pucho kuch bhi...")
+    q = st.chat_input("Message New AI...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        sys_msg = f"Name: New AI. Creator: {CREATOR_NAME}. Natural behavior."
-        try:
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": sys_msg}, {"role": "user", "content": q}])
-            st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
-            st.rerun()
-        except:
-            st.error("API Error: Groq Key check karo!")
+        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "user", "content": q}])
+        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
+        st.rerun()
 
-elif menu == "About Creator":
-    st.title("👤 About")
-    st.info(f"Made by: **{CREATOR_NAME}**")
+elif menu == "📩 Feedback":
+    st.header("📩 Send Feedback")
+    fb_text = st.text_area("How can we improve?")
+    if st.button("Send to Developer"):
+        try:
+            msg = MIMEText(f"Feedback from {st.session_state.current_user}:\n\n{fb_text}")
+            msg['Subject'] = 'New AI App Feedback'
+            msg['From'] = MY_GMAIL
+            msg['To'] = MY_GMAIL
+            with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+                server.login(MY_GMAIL, APP_PASS)
+                server.send_message(msg)
+            st.success("Feedback sent directly to Siddique's Gmail! ✅")
+        except Exception as e: st.error(f"Error: {e}")
+
+elif menu == "🛡️ Privacy Policy":
+    st.header("🛡️ Privacy Policy")
+    st.write("""
+    **1. Data Collection:** We do not store your personal conversations on our servers permanently. 
+    **2. Security:** Your login credentials are encrypted within the session.
+    **3. Third-Party:** We use Groq Cloud for processing AI responses.
+    """)
+
+elif menu == "📄 Terms":
+    st.header("📄 Terms & Conditions")
+    st.write("""
+    **1. Usage:** Users must not use this AI for illegal activities.
+    **2. Responsibility:** The developer is not liable for AI-generated content.
+    **3. Agreement:** By using New AI, you agree to these terms.
+    """)
+
+elif menu == "👤 About Creator":
+    st.header("👤 About Creator")
+    st.info(f"Developed & Maintained by **{CREATOR_NAME}**.")
     
