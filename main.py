@@ -4,7 +4,7 @@ import smtplib
 from email.mime.text import MIMEText
 
 # ================= 1. IDENTITY & CREDENTIALS =================
-GROQ_KEY = "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"
+GROQ_KEY = "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"
 CREATOR_NAME = "Siddique Mohd Saif"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
