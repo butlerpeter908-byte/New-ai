@@ -11,48 +11,50 @@ APP_PASS = "rkpi toiq sdgj vfvn"
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. UI & VISIBILITY CSS =================
+# ================= 2. THE ULTIMATE BUTTON TRANSFORMATION CSS =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 st.markdown(f"""
     <style>
+    /* Remove default space and headers */
     .block-container {{ padding-top: 0.5rem !important; }}
     header, footer {{visibility: hidden !important;}}
     .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }}
 
-    /* Custom Floating Menu Button 'M' */
+    /* TRANSFORMING THE REAL BUTTON INTO 'M' ICON */
+    /* Isse button 100% click hoga mobile par */
     button[data-testid="stSidebarCollapse"] {{
-        opacity: 0.0 !important; /* Real button is hidden but clickable */
+        background-color: #00ff88 !important;
+        color: black !important;
         position: fixed !important;
-        top: 20px !important;
-        right: 20px !important;
-        width: 70px !important;
-        height: 70px !important;
+        top: 25px !important;
+        right: 25px !important; /* Right side shift */
+        width: 65px !important;
+        height: 65px !important;
         z-index: 9999999 !important;
+        border-radius: 50% !important;
+        box-shadow: 0px 0px 20px #00ff88 !important;
+        border: 3px solid white !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }}
 
-    .custom-menu-btn {{
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        width: 60px;
-        height: 60px;
-        background-color: #00ff88;
-        color: black;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    /* Adding the letter 'M' inside the button via CSS */
+    button[data-testid="stSidebarCollapse"]::after {{
+        content: "M";
         font-weight: bold;
         font-size: 24px;
-        z-index: 9999998;
-        box-shadow: 0px 0px 20px #00ff88;
-        border: 3px solid white;
-        pointer-events: none;
+        color: black;
+    }}
+
+    /* Hiding the default three lines (hamburger icon) */
+    button[data-testid="stSidebarCollapse"] svg {{
+        display: none !important;
     }}
 
     /* WhatsApp Style Bubbles */
-    .chat-container {{ display: flex; flex-direction: column; gap: 10px; padding: 10px; margin-top: 70px; }}
+    .chat-container {{ display: flex; flex-direction: column; gap: 10px; padding: 10px; margin-top: 80px; }}
     .user-bubble {{
         background-color: #005c4b; color: white; padding: 12px; 
         border-radius: 15px 15px 0px 15px; align-self: flex-end; max-width: 85%;
@@ -63,11 +65,9 @@ st.markdown(f"""
         border-left: 4px solid #00a884;
     }}
     </style>
-    
-    <div class="custom-menu-btn">M</div>
     """, unsafe_allow_html=True)
 
-# ================= 3. AUTHENTICATION (BOTH OPTIONS) =================
+# ================= 3. AUTHENTICATION (SIGN IN + SIGN UP) =================
 if "user_db" not in st.session_state: st.session_state.user_db = {"admin": "123"}
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -77,7 +77,7 @@ if not st.session_state.logged_in:
     st.title("🔐 Welcome to New AI")
     st.write(f"Developed by {CREATOR_NAME}")
     
-    # Dono Options wapas aa gaye!
+    # Dono Options wapas
     tab_login, tab_signup = st.tabs(["🔑 Sign In", "📝 Create Account"])
     
     with tab_login:
@@ -85,36 +85,37 @@ if not st.session_state.logged_in:
         p = st.text_input("Password", type="password", key="l_p")
         if st.button("Login Now", use_container_width=True):
             if u in st.session_state.user_db and st.session_state.user_db[u] == p:
-                st.session_state.logged_in = True
-                st.session_state.current_user = u
-                st.rerun()
-            else:
-                st.error("Invalid Details!")
+                st.session_state.logged_in = True; st.session_state.current_user = u; st.rerun()
+            else: st.error("Invalid Login!")
 
     with tab_signup:
         nu = st.text_input("New Username", key="s_u")
         np = st.text_input("New Password", type="password", key="s_p")
         if st.button("Register Account", use_container_width=True):
             if nu and np:
-                st.session_state.user_db[nu] = np
-                st.success("Account Created! Go to Sign In tab.")
-            else:
-                st.warning("Please fill all details.")
+                st.session_state.user_db[nu] = np; st.success("Account Ready! Now Sign In.")
+            else: st.warning("Fields cannot be empty.")
     st.stop()
 
-# ================= 4. SIDEBAR SETTINGS (ONLY AFTER LOGIN) =================
+# ================= 4. SIDEBAR (AFTER LOGIN) =================
 with st.sidebar:
     st.title("🤖 SETTINGS")
     st.write(f"User: **{st.session_state.current_user}**")
     st.markdown("---")
-    menu = st.radio("Go to:", ["💬 Chat", "👤 About Creator", "📩 Feedback", "🛡️ Privacy Policy", "📄 Terms"])
+    menu = st.radio("Navigation", [
+        "💬 Chat", 
+        "👤 About Creator", 
+        "📩 Feedback", 
+        "🛡️ Privacy Policy", 
+        "📄 Terms & Conditions"
+    ])
     st.markdown("---")
     if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.messages = []; st.rerun()
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False; st.rerun()
 
-# ================= 5. PAGE CONTENT (ENGLISH) =================
+# ================= 5. CONTENT (PROFESSIONAL ENGLISH) =================
 if menu == "💬 Chat":
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for m in st.session_state.messages:
@@ -131,23 +132,23 @@ if menu == "💬 Chat":
 
 elif menu == "📩 Feedback":
     st.header("📩 Feedback")
-    fb = st.text_area("How can we improve?")
+    fb = st.text_area("Write feedback...")
     if st.button("Submit"):
         try:
             msg = MIMEText(fb); msg['Subject']='New AI Feedback'; msg['From']=MY_GMAIL; msg['To']=MY_GMAIL
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s: s.login(MY_GMAIL, APP_PASS); s.send_message(msg)
-            st.success("Sent to Siddique's Gmail! ✅")
+            st.success("Feedback sent! ✅")
         except: st.error("Mail Error.")
+
+elif menu == "👤 About Creator":
+    st.header("👤 Creator")
+    st.info(f"Developed by: **{CREATOR_NAME}**")
 
 elif menu == "🛡️ Privacy Policy":
     st.header("🛡️ Privacy Policy")
-    st.write("Professional English: We ensure that your session data is temporary and secure.")
+    st.write("We ensure your chat session is secure and private.")
 
-elif menu == "📄 Terms":
-    st.header("📄 Terms & Conditions")
-    st.write("Professional English: Use this AI for ethical and legal purposes only.")
-
-elif menu == "👤 About Creator":
-    st.header("👤 About")
-    st.info(f"Designed and Developed by: **{CREATOR_NAME}**")
-    
+elif menu == "📄 Terms & Conditions":
+    st.header("📄 Terms")
+    st.write("Use this tool responsibly according to legal guidelines.")
+        
