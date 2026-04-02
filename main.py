@@ -11,26 +11,44 @@ APP_PASS = "rkpi toiq sdgj vfvn"
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. FIXED UI & BUTTON CSS =================
-st.set_page_config(page_title="New AI 🤖", layout="wide")
+# ================= 2. THE ULTIMATE CSS FIX (FORCED VISIBILITY) =================
+st.set_page_config(page_title="New AI 🤖", layout="wide", initial_sidebar_state="collapsed")
 
 st.markdown(f"""
     <style>
-    .block-container {{ padding-top: 0rem !important; }}
+    /* Sabse pehle extra space aur default headers khatam */
+    .block-container {{ padding-top: 0.5rem !important; }}
     header, footer {{visibility: hidden !important;}}
     .stApp {{ background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); }}
 
-    /* CUSTOM TOP NAVIGATION FOR MOBILE */
-    .mobile-header {{
-        position: fixed; top: 0; left: 0; width: 100%; height: 60px;
-        background: rgba(0, 255, 136, 0.2); backdrop-filter: blur(10px);
-        display: flex; align-items: center; justify-content: space-between;
-        padding: 0 20px; z-index: 99999; border-bottom: 1px solid #00ff88;
+    /* CUSTOM FLOATING MENU BUTTON (☰) - 100% VISIBLE ON MOBILE */
+    /* Hum asali button ko hi customize karke top par la rahe hain */
+    button[data-testid="stSidebarCollapse"] {{
+        background-color: #00ff88 !important; /* Neon Green */
+        color: black !important;
+        position: fixed !important;
+        top: 15px !important;
+        left: 15px !important;
+        width: 50px !important;
+        height: 50px !important;
+        z-index: 9999999 !important;
+        border-radius: 10px !important;
+        box-shadow: 0px 0px 15px #00ff88 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: 2px solid white !important;
     }}
-    .menu-text {{ color: #00ff88; font-weight: bold; font-size: 20px; }}
+
+    /* Ensuring the icon inside is black and visible */
+    button[data-testid="stSidebarCollapse"] svg {{
+        fill: black !important;
+        width: 30px !important;
+        height: 30px !important;
+    }}
 
     /* WhatsApp Style Bubbles */
-    .chat-container {{ display: flex; flex-direction: column; gap: 10px; padding: 15px; margin-top: 70px; }}
+    .chat-container {{ display: flex; flex-direction: column; gap: 10px; padding: 15px; margin-top: 60px; }}
     .user-bubble {{
         background-color: #005c4b; color: white; padding: 12px; 
         border-radius: 15px 15px 0px 15px; align-self: flex-end; max-width: 85%;
@@ -43,8 +61,7 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# ================= 3. PERSISTENT LOGIN LOGIC =================
-# Refresh pe logout na ho isliye session state ko strong kiya hai
+# ================= 3. PERSISTENT SESSION LOGIC =================
 if "user_db" not in st.session_state: st.session_state.user_db = {"admin": "123"}
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -53,48 +70,50 @@ if "messages" not in st.session_state: st.session_state.messages = []
 if not st.session_state.logged_in:
     st.markdown('<div style="text-align: center; color:white; padding-top:80px;">', unsafe_allow_html=True)
     st.title("🔐 Welcome to New AI")
-    tab1, tab2 = st.tabs(["🔑 Sign In", "📝 Create Account"])
-    
-    with tab1:
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        if st.button("Login"):
+    t1, t2 = st.tabs(["🔑 Sign In", "📝 Create Account"])
+    with t1:
+        u = st.text_input("Username", key="login_user")
+        p = st.text_input("Password", type="password", key="login_pass")
+        if st.button("Login", use_container_width=True):
             if u in st.session_state.user_db and st.session_state.user_db[u] == p:
                 st.session_state.logged_in = True
                 st.session_state.current_user = u
                 st.rerun()
             else: st.error("Wrong details!")
-            
-    with tab2:
-        nu = st.text_input("Choose Username")
-        np = st.text_input("Choose Password", type="password")
-        if st.button("Register"):
+    with t2:
+        nu = st.text_input("New Username", key="reg_user")
+        np = st.text_input("New Password", type="password", key="reg_pass")
+        if st.button("Register", use_container_width=True):
             st.session_state.user_db[nu] = np; st.success("Account Ready!")
     st.stop()
 
-# ================= 4. SIDEBAR SETTINGS =================
-# Ab sidebar ke sath-sath top header bhi hai visibility ke liye
+# ================= 4. SIDEBAR SETTINGS (RE-ADDED ALL PAGES) =================
 with st.sidebar:
     st.title("🤖 New AI Menu")
-    st.write(f"User: **{st.session_state.current_user}**")
+    st.write(f"Logged as: **{st.session_state.current_user}**")
     st.markdown("---")
-    menu = st.radio("Pages", ["💬 Chat", "👤 About Developer", "📩 Feedback", "🛡️ Privacy", "📄 Terms"])
+    menu = st.radio("Navigation", [
+        "💬 Chat", 
+        "👤 About Creator", 
+        "📩 Feedback", 
+        "🛡️ Privacy Policy", 
+        "📄 Terms & Conditions"
+    ])
     st.markdown("---")
     if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.messages = []; st.rerun()
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False; st.rerun()
 
-# ================= 5. MAIN PAGE CONTENT =================
+# ================= 5. MAIN CONTENT =================
 if menu == "💬 Chat":
-    st.markdown('<div class="mobile-header"><span class="menu-text">New AI 🤖</span></div>', unsafe_allow_html=True)
     st.markdown('<div class="chat-container">', unsafe_allow_html=True)
     for m in st.session_state.messages:
         role = "user-bubble" if m["role"] == "user" else "ai-bubble"
         st.markdown(f'<div class="{role}">{m["content"]}</div>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
     
-    q = st.chat_input("Ask Siddique's AI...")
+    q = st.chat_input("Message New AI...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "user", "content": q}])
@@ -108,18 +127,17 @@ elif menu == "📩 Feedback":
         try:
             msg = MIMEText(fb); msg['Subject']='New AI Feedback'; msg['From']=MY_GMAIL; msg['To']=MY_GMAIL
             with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s: s.login(MY_GMAIL, APP_PASS); s.send_message(msg)
-            st.success("Feedback Sent! ✅")
+            st.success("Sent to Siddique's Gmail! ✅")
         except: st.error("Email Error.")
 
-elif menu == "🛡️ Privacy":
+elif menu == "🛡️ Privacy Policy":
     st.header("🛡️ Privacy Policy")
-    st.write("Professional English: We ensure your chat data is secure and temporary.")
+    st.write("Professional English: We ensure that your chat data is secure and session-based.")
 
-elif menu == "📄 Terms":
-    st.header("📄 Terms of Use")
-    st.write("Professional English: Usage must comply with ethical AI guidelines.")
+elif menu == "📄 Terms & Conditions":
+    st.header("📄 Terms")
+    st.write("Professional English: Usage must follow ethical guidelines set by the developer.")
 
-elif menu == "👤 About Developer":
+elif menu == "👤 About Creator":
     st.header("👤 Creator")
     st.info(f"Designed and Developed by: **{CREATOR_NAME}**")
-    
