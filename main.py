@@ -1,119 +1,97 @@
 import streamlit as st
 from groq import Groq
 import smtplib
+import random
 from email.mime.text import MIMEText
 
-# ================= 1. IDENTITY & API KEY =================
+# ================= 1. CREDENTIALS & SETUP =================
 GROQ_KEY = "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"
-CREATOR_NAME = "Siddique Mohd Saif"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. CLEAN CSS & UI FIX =================
+# ================= 2. CLEAN UI (No Profile Icon) =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 st.markdown("""
     <style>
-    header, footer { visibility: hidden !important; height: 0px !important; }
-    .block-container { padding-top: 1rem !important; }
+    header, footer { visibility: hidden !important; }
     .stApp { background-color: #0e1117; color: white; }
-
-    /* FLOATING PROFILE ICON (LEFT SIDE) */
-    .my-profile-icon {
-        position: fixed !important;
-        top: 20px !important;
-        left: 20px !important;
-        background-color: #00ff88 !important;
-        color: black !important;
-        border-radius: 50% !important;
-        width: 55px !important;
-        height: 55px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 26px !important;
-        cursor: pointer !important;
-        z-index: 9999999 !important;
-        border: 3px solid white !important;
-        box-shadow: 0px 0px 20px rgba(0, 255, 136, 0.7) !important;
-        pointer-events: auto !important;
-    }
-
-    /* SideBar Styling */
-    [data-testid="stSidebar"] {
-        background-color: #161b22 !important;
-        border-right: 2px solid #00ff88 !important;
-    }
-    
-    .menu-item {
-        padding: 12px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        font-weight: bold;
-        font-size: 18px;
-        border-left: 5px solid;
-        display: block;
-    }
-
     /* Chat Bubbles */
-    .user-msg { background-color: #005c4b; padding: 12px; border-radius: 15px 15px 0px 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 85%; border: 1px solid #00a884; }
+    .user-msg { background-color: #005c4b; padding: 12px; border-radius: 15px 15px 0px 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 85%; }
     .ai-msg { background-color: #202c33; padding: 12px; border-radius: 15px 15px 15px 0px; margin: 10px 0; border-left: 5px solid #00ff88; max-width: 85%; }
-
-    /* Hide Red Error Boxes */
-    .stException, .stAlert[data-baseweb="notification"] { display: none !important; }
+    /* Hide Errors */
+    .stException, .stAlert { display: none !important; }
     </style>
-    
-    <script>
-    function toggleSidebar() {
-        const sidebarBtn = window.parent.document.querySelector('button[data-testid="stSidebarCollapse"]');
-        if (sidebarBtn) { sidebarBtn.click(); }
-    }
-    </script>
-
-    <div class="my-profile-icon" onclick="toggleSidebar()">👤</div>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION & LOGIN =================
+# ================= 3. OTP & SESSION LOGIC =================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
+if "generated_otp" not in st.session_state: st.session_state.generated_otp = None
+if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "messages" not in st.session_state: st.session_state.messages = []
-if "user_db" not in st.session_state: st.session_state.user_db = {"admin": "123"}
 
+def send_otp_email(receiver_email, otp):
+    try:
+        msg = MIMEText(f"Aapka New AI Verification OTP hai: {otp}")
+        msg['Subject'] = 'New AI Login OTP'
+        msg['From'] = MY_GMAIL
+        msg['To'] = receiver_email
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
+            server.login(MY_GMAIL, APP_PASS)
+            server.send_message(msg)
+        return True
+    except:
+        return False
+
+# ================= 4. OTP LOGIN SCREEN =================
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center; color:#00ff88;'>🔐 New AI Portal</h1>", unsafe_allow_html=True)
-    u = st.text_input("Username", key="login_u")
-    p = st.text_input("Password", type="password", key="login_p")
-    if st.button("Enter AI", use_container_width=True):
-        if u in st.session_state.user_db and st.session_state.user_db[u] == p:
-            st.session_state.logged_in = True; st.session_state.current_user = u; st.rerun()
-        else: st.error("Wrong details!")
+    st.markdown("<h1 style='text-align: center; color:#00ff88;'>🔐 New AI Secure Login</h1>", unsafe_allow_html=True)
+    
+    if not st.session_state.otp_sent:
+        email_input = st.text_input("Apna Gmail Id daalein:")
+        if st.button("OTP Bhein", use_container_width=True):
+            if "@gmail.com" in email_input:
+                otp = str(random.randint(1000, 9999))
+                if send_otp_email(email_input, otp):
+                    st.session_state.generated_otp = otp
+                    st.session_state.user_email = email_input
+                    st.session_state.otp_sent = True
+                    st.rerun()
+                else: st.error("Email bhenjne mein dikat hui!")
+            else: st.warning("Sahi Gmail id daalein!")
+    else:
+        st.info(f"OTP aapki email ({st.session_state.user_email}) par bhej diya gaya hai.")
+        otp_input = st.text_input("4-Digit OTP daalein:", type="password")
+        if st.button("Verify & Enter", use_container_width=True):
+            if otp_input == st.session_state.generated_otp:
+                st.session_state.logged_in = True
+                st.rerun()
+            else: st.error("Galat OTP!")
+        if st.button("Email Change Karein"):
+            st.session_state.otp_sent = False
+            st.rerun()
     st.stop()
 
-# ================= 4. MINIMAL SIDEBAR =================
+# ================= 5. MAIN APP & FEEDBACK =================
 with st.sidebar:
-    st.markdown(f"<h2 style='color:#00ff88; text-align:center;'>👤 {st.session_state.current_user}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='color:#00ff88;'>👤 Verified User</h3>", unsafe_allow_html=True)
+    st.markdown(f"<p style='font-size:12px;'>{st.session_state.user_email}</p>", unsafe_allow_html=True)
     st.markdown("---")
-    
-    st.markdown('<div class="menu-item" style="color:#00d2ff; border-color:#00d2ff;">💬 Messenger</div>', unsafe_allow_html=True)
-    st.markdown('<div class="menu-item" style="color:#ff4b4b; border-color:#ff4b4b;">📩 Feedback</div>', unsafe_allow_html=True)
-    
-    page = st.radio("Go to:", ["Chat", "Feedback"], label_visibility="collapsed")
-    
+    choice = st.radio("Menu", ["💬 Chat", "📩 Feedback"])
     st.markdown("---")
-    if st.button("🗑️ Clear Chat", use_container_width=True):
-        st.session_state.messages = []; st.rerun()
-    if st.button("🛑 Logout", use_container_width=True):
-        st.session_state.logged_in = False; st.rerun()
+    if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
+    if st.button("🚪 Logout"): st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
-# ================= 5. MAIN CONTENT =================
-if page == "Chat":
+if choice == "💬 Chat":
     st.markdown("<h3 style='text-align:center; color:#00ff88;'>🤖 New AI Assistant</h3>", unsafe_allow_html=True)
     for m in st.session_state.messages:
-        div_class = "user-msg" if m["role"] == "user" else "ai-msg"
-        st.markdown(f'<div class="{div_class}">{m["content"]}</div>', unsafe_allow_html=True)
+        role = "user-msg" if m["role"] == "user" else "ai-msg"
+        st.markdown(f'<div class="{role}">{m["content"]}</div>', unsafe_allow_html=True)
     
-    q = st.chat_input("Ask Siddique's AI...")
+    q = st.chat_input("Puchiye...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         try:
@@ -122,24 +100,20 @@ if page == "Chat":
             st.rerun()
         except: pass
 
-elif page == "Feedback":
-    st.header("📩 Send Feedback")
-    st.write("Aapka experience kaisa raha? Siddique ko direct message bhein.")
-    feedback_text = st.text_area("Write your message here...", height=150)
-    
+elif choice == "📩 Feedback":
+    st.header("📩 Feedback")
+    fb = st.text_area("Aapka experience kaisa raha?")
     if st.button("Submit Feedback", use_container_width=True):
-        if feedback_text:
+        if fb:
             try:
-                msg = MIMEText(f"User: {st.session_state.current_user}\nFeedback: {feedback_text}")
-                msg['Subject'] = 'New AI User Feedback'
-                msg['From'] = MY_GMAIL
-                msg['To'] = MY_GMAIL
-                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as server:
-                    server.login(MY_GMAIL, APP_PASS)
-                    server.send_message(msg)
-                st.success("Feedback sent to Siddique! ✅")
-            except:
-                st.error("Email sending failed. Please check credentials.")
-        else:
-            st.warning("Kuch toh likho bhai!")
+                f_msg = MIMEText(f"Feedback from: {st.session_state.user_email}\n\nMessage: {fb}")
+                f_msg['Subject'] = 'New AI Feedback'
+                f_msg['From'] = MY_GMAIL
+                f_msg['To'] = MY_GMAIL
+                with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+                    s.login(MY_GMAIL, APP_PASS)
+                    s.send_message(f_msg)
+                st.success("Feedback Siddique ko bhej diya gaya! ✅")
+            except: st.error("Error sending feedback.")
+        else: st.warning("Kuch likhiye toh!")
             
