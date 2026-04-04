@@ -11,21 +11,32 @@ APP_PASS = "rkpi toiq sdgj vfvn"
 
 client = Groq(api_key=GROQ_KEY)
 
-# ================= 2. FORCE DARK MODE CSS =================
+# ================= 2. FORCE DARK & BOTTOM CHAT CSS =================
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
 st.markdown("""
     <style>
-    /* Force Dark Theme: System kuch bhi ho, AI Dark rahega */
     :root { color-scheme: dark; }
     header, footer { visibility: hidden !important; }
     
+    /* Hard Dark Background */
     .stApp { 
         background-color: #0e1117 !important; 
         color: #ffffff !important; 
     }
 
-    /* Feedback Box Centre Styling */
+    /* Fixing Chat Input to Bottom */
+    .stChatInputContainer {
+        position: fixed !important;
+        bottom: 20px !important;
+        left: 0;
+        right: 0;
+        padding: 10px !important;
+        background-color: #0e1117 !important;
+        z-index: 999;
+    }
+
+    /* Feedback Box Styling */
     .feedback-container {
         background: linear-gradient(45deg, #161b22, #21262d);
         border: 2px solid #00ff88;
@@ -34,36 +45,24 @@ st.markdown("""
         text-align: center;
         margin: 20px auto;
         box-shadow: 0px 0px 20px rgba(0, 255, 136, 0.3);
-        max-width: 500px;
-    }
-
-    .feedback-title {
-        color: #00ff88;
-        font-weight: bold;
-        font-size: 22px;
-        margin-bottom: 10px;
-    }
-
-    /* Input & Buttons visibility fix */
-    input, textarea {
-        background-color: #1c2128 !important;
-        color: white !important;
-        border: 1px solid #30363d !important;
     }
 
     /* Chat Bubbles */
-    .user-msg { background-color: #005c4b; padding: 12px; border-radius: 15px 15px 0px 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
+    .user-msg { background-color: #005c4b; padding: 12px; border-radius: 15px 15px 0px 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; border: 0.5px solid #00a884; }
     .ai-msg { background-color: #202c33; padding: 12px; border-radius: 15px 15px 15px 0px; margin: 10px 0; border-left: 5px solid #00ff88; max-width: 80%; }
     
+    /* Input Visibility Fix */
+    input, textarea { background-color: #1c2128 !important; color: white !important; }
+
     /* Hide Red Boxes */
-    .stException, .stAlert { display: none !important; }
+    .stException, .stAlert[data-baseweb="notification"] { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION STATE =================
+# ================= 3. PERMANENT SESSION LOGIC =================
+# Isse login refresh par nahi udega
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
-if "generated_otp" not in st.session_state: st.session_state.generated_otp = None
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "messages" not in st.session_state: st.session_state.messages = []
 
@@ -79,40 +78,55 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
-# ================= 4. LOGIN SCREEN (FORCE DARK) =================
+# ================= 4. LOGIN LOGIC (ONLY IF NOT LOGGED IN) =================
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center; color:#00ff88;'>🔐 Secure AI Login</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='text-align: center; color:#00ff88;'>🔐 New AI Portal</h1>", unsafe_allow_html=True)
     
-    with st.container():
-        if not st.session_state.otp_sent:
-            email = st.text_input("Enter Gmail:")
-            if st.button("Get OTP", use_container_width=True):
-                if "@gmail.com" in email:
-                    otp = str(random.randint(1000, 9999))
-                    if send_mail(email, "Login OTP", f"Your OTP: {otp}"):
-                        st.session_state.generated_otp = otp
-                        st.session_state.user_email = email
-                        st.session_state.otp_sent = True
-                        st.rerun()
-        else:
-            otp_in = st.text_input("Enter 4-Digit OTP:", type="password")
-            if st.button("Verify", use_container_width=True):
-                if otp_in == st.session_state.generated_otp:
-                    st.session_state.logged_in = True
+    if not st.session_state.otp_sent:
+        email = st.text_input("Enter Gmail:")
+        if st.button("Get OTP", use_container_width=True):
+            if "@gmail.com" in email:
+                otp = str(random.randint(1000, 9999))
+                if send_mail(email, "Login OTP", f"Your OTP: {otp}"):
+                    st.session_state.generated_otp = otp
+                    st.session_state.user_email = email
+                    st.session_state.otp_sent = True
                     st.rerun()
-                else: st.error("Wrong OTP")
+    else:
+        otp_in = st.text_input("Enter 4-Digit OTP:", type="password")
+        if st.button("Verify", use_container_width=True):
+            if otp_in == st.session_state.generated_otp:
+                st.session_state.logged_in = True
+                st.rerun()
+            else: st.error("Wrong OTP")
     st.stop()
 
-# ================= 5. MAIN APP & CENTRE FEEDBACK =================
-tab1, tab2 = st.tabs(["💬 Chat", "📩 Send Feedback"])
+# ================= 5. MAIN APP INTERFACE =================
+# Sidebar for Navigation (Chat/Feedback) and Logout
+with st.sidebar:
+    st.markdown(f"<h3 style='color:#00ff88;'>👤 {st.session_state.user_email}</h3>", unsafe_allow_html=True)
+    st.markdown("---")
+    choice = st.radio("Navigation", ["💬 Chat", "📩 Feedback"])
+    st.markdown("---")
+    if st.button("🗑️ Clear History", use_container_width=True): 
+        st.session_state.messages = []
+        st.rerun()
+    if st.button("🚪 Logout Account", use_container_width=True):
+        st.session_state.logged_in = False
+        st.session_state.otp_sent = False
+        st.rerun()
 
-with tab1:
+# --- CHAT TAB ---
+if choice == "💬 Chat":
     st.markdown("<h3 style='text-align:center; color:#00ff88;'>🤖 Siddique's AI</h3>", unsafe_allow_html=True)
+    
+    # Message Display
     for m in st.session_state.messages:
         role = "user-msg" if m["role"] == "user" else "ai-msg"
         st.markdown(f'<div class="{role}">{m["content"]}</div>', unsafe_allow_html=True)
     
-    q = st.chat_input("Ask me something...")
+    # Bottom Chat Input
+    q = st.chat_input("Puchiye...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         try:
@@ -121,27 +135,20 @@ with tab1:
             st.rerun()
         except: pass
 
-with tab2:
-    # CENTRE FEEDBACK SECTION
+# --- FEEDBACK TAB ---
+elif choice == "📩 Feedback":
     st.markdown("""
         <div class="feedback-container">
-            <div class="feedback-title">📩 Share Your Feedback</div>
-            <p style='color:#8b949e;'>Aapka opinion Siddique ke liye zaroori hai.</p>
+            <h2 style='color:#00ff88;'>📩 Feedback Area</h2>
+            <p>Your message will be sent directly to Siddique.</p>
         </div>
     """, unsafe_allow_html=True)
     
-    fb_text = st.text_area("Write here...", placeholder="Kaisa laga AI?", height=150)
-    if st.button("🚀 Submit to Siddique", use_container_width=True):
+    fb_text = st.text_area("Write here...", height=150)
+    if st.button("🚀 Send to Siddique", use_container_width=True):
         if fb_text:
-            if send_mail(MY_GMAIL, "New Feedback", f"From: {st.session_state.user_email}\n\n{fb_text}"):
+            if send_mail(MY_GMAIL, "New Feedback", f"User: {st.session_state.user_email}\n\n{fb_text}"):
                 st.success("Feedback sent! ✅")
             else: st.error("Failed to send.")
-        else: st.warning("Khali feedback mat bhejo bhai!")
-
-# Simple Sidebar for Logout only
-with st.sidebar:
-    st.write(f"Logged in: **{st.session_state.user_email}**")
-    if st.button("Logout"):
-        st.session_state.logged_in = False
-        st.rerun()
-                                                                                          
+        else: st.warning("Kuch likhiye!")
+        
