@@ -15,23 +15,96 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
-# ================= 2. UI & DESIGN (Dark Mode) =================
+# ================= 2. THE PREMIUM CSS (Shaandaar Look) =================
 st.markdown("""
     <style>
+    /* Global Styles */
     :root { color-scheme: dark; }
     header, footer { visibility: hidden !important; }
-    .stApp { background-color: #0e1117 !important; color: #ffffff !important; }
-    
-    /* Chat Bubbles */
-    .user-msg { background-color: #005c4b; padding: 12px; border-radius: 15px 15px 0px 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; border: 0.5px solid #00a884; }
-    .ai-msg { background-color: #202c33; padding: 12px; border-radius: 15px 15px 15px 0px; margin: 10px 0; border-left: 5px solid #00ff88; max-width: 80%; }
-    
-    /* Input Fix */
-    .stChatInputContainer { position: fixed !important; bottom: 20px !important; z-index: 999; background-color: #0e1117 !important; }
-    
-    /* Settings Styling */
-    .settings-card { background-color: #1c2128; padding: 15px; border-radius: 10px; border-left: 4px solid #00ff88; margin-bottom: 10px; }
-    
+    .stApp { 
+        background: radial-gradient(circle at top, #1a1f25 0%, #0e1117 100%) !important;
+        color: #e0e0e0 !important;
+        font-family: 'Inter', sans-serif;
+    }
+
+    /* Modern Tabs Styling */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+        background-color: rgba(255, 255, 255, 0.05);
+        padding: 8px;
+        border-radius: 15px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        height: 45px;
+        border-radius: 10px;
+        background-color: transparent;
+        color: #888;
+        transition: 0.3s;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #00ff88 !important;
+        color: #000 !important;
+        font-weight: bold;
+        box-shadow: 0px 4px 15px rgba(0, 255, 136, 0.4);
+    }
+
+    /* Chat Bubble Overhaul */
+    .user-msg { 
+        background: linear-gradient(135deg, #00b09b, #96c93d); 
+        color: white;
+        padding: 14px 18px; 
+        border-radius: 20px 20px 4px 20px; 
+        margin: 12px 0; 
+        text-align: right; 
+        margin-left: auto; 
+        max-width: 85%; 
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+    }
+    .ai-msg { 
+        background: rgba(255, 255, 255, 0.07); 
+        backdrop-filter: blur(10px);
+        padding: 14px 18px; 
+        border-radius: 20px 20px 20px 4px; 
+        margin: 12px 0; 
+        border-left: 4px solid #00ff88; 
+        max-width: 85%; 
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.2);
+    }
+
+    /* Input Box at Bottom */
+    .stChatInputContainer { 
+        position: fixed !important; 
+        bottom: 15px !important; 
+        z-index: 1000; 
+        background: rgba(14, 17, 23, 0.8) !important;
+        backdrop-filter: blur(15px);
+        border-radius: 30px !important;
+        border: 1px solid rgba(255,255,255,0.1) !important;
+    }
+
+    /* Settings & Cards */
+    .settings-card {
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        padding: 20px;
+        margin-bottom: 15px;
+    }
+
+    /* Buttons */
+    .stButton>button {
+        border-radius: 12px !important;
+        background: linear-gradient(90deg, #00ff88, #00d2ff) !important;
+        color: black !important;
+        font-weight: bold !important;
+        border: none !important;
+        transition: 0.3s !important;
+    }
+    .stButton>button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0px 5px 15px rgba(0, 255, 136, 0.4);
+    }
+
     .stException, .stAlert { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -51,48 +124,53 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
-# ================= 4. LOGIN (OTP) =================
+# ================= 4. LOGIN UI (Modern) =================
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align:center; color:#00ff88;'>🔐 Secure Login</h1>", unsafe_allow_html=True)
-    email = st.text_input("Enter Gmail:", value=st.session_state.user_email)
+    st.markdown("<h1 style='text-align:center; color:#00ff88; margin-bottom:30px;'>🚀 Welcome to New AI</h1>", unsafe_allow_html=True)
     
-    if not st.session_state.otp_sent:
-        if st.button("Send OTP", use_container_width=True):
-            if "@gmail.com" in email:
-                otp = str(random.randint(1000, 9999))
-                if send_mail(email, "Login OTP", f"OTP: {otp}"):
-                    st.session_state.generated_otp = otp; st.session_state.user_email = email
-                    st.session_state.otp_sent = True; st.session_state.last_otp_time = time.time(); st.rerun()
-    else:
-        st.info(f"📩 OTP sent to {st.session_state.user_email}")
-        otp_in = st.text_input("Enter OTP:", type="password")
-        if st.button("Verify & Enter", use_container_width=True):
-            if otp_in == st.session_state.generated_otp: st.session_state.logged_in = True; st.rerun()
+    with st.container():
+        st.markdown('<div class="settings-card">', unsafe_allow_html=True)
+        email = st.text_input("Enter your Gmail address:")
         
-        elapsed = time.time() - st.session_state.last_otp_time
-        if elapsed < 60: st.write(f"Resend in {int(60-elapsed)}s")
-        elif st.button("Resend OTP"): st.session_state.otp_sent = False; st.rerun()
+        if not st.session_state.otp_sent:
+            if st.button("Generate Secure OTP", use_container_width=True):
+                if "@gmail.com" in email:
+                    otp = str(random.randint(1000, 9999))
+                    if send_mail(email, "Login OTP", f"Aapka Secure OTP hai: {otp}"):
+                        st.session_state.generated_otp = otp; st.session_state.user_email = email
+                        st.session_state.otp_sent = True; st.session_state.last_otp_time = time.time(); st.rerun()
+        else:
+            st.success(f"OTP Sent to {st.session_state.user_email}")
+            otp_in = st.text_input("Enter 4-Digit OTP:", type="password")
+            if st.button("Verify & Login", use_container_width=True):
+                if otp_in == st.session_state.generated_otp: st.session_state.logged_in = True; st.rerun()
+            
+            elapsed = time.time() - st.session_state.last_otp_time
+            if elapsed < 60: st.info(f"Resend in {int(60-elapsed)}s")
+            else: 
+                if st.button("Resend Now", use_container_width=True): st.session_state.otp_sent = False; st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
-# ================= 5. MAIN INTERFACE (TABS) =================
+# ================= 5. MAIN INTERFACE =================
 with st.sidebar:
-    st.write(f"👤 **{st.session_state.user_email}**")
-    if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
-    if st.button("🚪 Logout"): st.session_state.logged_in = False; st.rerun()
+    st.markdown(f"<div style='text-align:center;'><h3 style='color:#00ff88;'>👤 Profile</h3><p>{st.session_state.user_email}</p></div>", unsafe_allow_html=True)
+    st.markdown("---")
+    if st.button("🗑️ Clear History", use_container_width=True): st.session_state.messages = []; st.rerun()
+    if st.button("🚪 Logout Account", use_container_width=True): st.session_state.logged_in = False; st.rerun()
 
-# --- TABS CREATION ---
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Chat", "⚙️ Settings", "📩 Feedback"])
+# --- SHAANDAAR TABS ---
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Feedback"])
 
-# --- CHAT TAB ---
+# --- MESSENGER ---
 with tab_chat:
-    st.markdown("<h3 style='text-align:center; color:#00ff88;'>🤖 Siddique's AI</h3>", unsafe_allow_html=True)
     chat_box = st.container()
     with chat_box:
         for m in st.session_state.messages:
             div = "user-msg" if m["role"] == "user" else "ai-msg"
             st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
 
-    q = st.chat_input("Puchiye...")
+    q = st.chat_input("Ask me anything...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         with chat_box: st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
@@ -104,32 +182,28 @@ with tab_chat:
             st.rerun()
         except: pass
 
-# --- SETTINGS TAB ---
+# --- SETTINGS ---
 with tab_settings:
-    st.header("⚙️ App Settings")
+    st.markdown("<h2 style='color:#00ff88;'>⚙️ App Control Center</h2>", unsafe_allow_html=True)
     
-    with st.expander("👤 About Developer"):
-        st.write(f"Created by: **{CREATOR}**")
-        st.write("Purpose: Advanced AI assistant for high-speed mobile interaction.")
+    st.markdown('<div class="settings-card">', unsafe_allow_html=True)
+    st.subheader("👤 About Developer")
+    st.write(f"This AI Portal is crafted by **{CREATOR}**.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    with st.expander("🛡️ Privacy Policy"):
-        st.write("1. We do not store your personal chats on our main database.")
-        st.write("2. Sessions are temporary and cleared upon logout.")
-        st.write("3. Your Email is only used for OTP verification.")
+    st.markdown('<div class="settings-card">', unsafe_allow_html=True)
+    st.subheader("🛡️ Privacy & Security")
+    st.write("• End-to-end Session Encryption\n• No persistent chat logs\n• Secure OTP Authentication")
+    st.markdown('</div>', unsafe_allow_html=True)
 
-    with st.expander("📄 Terms & Conditions"):
-        st.write("- Use this AI for ethical purposes.")
-        st.write("- Do not attempt to bypass security layers.")
-        st.write("- The developer is not responsible for generated content.")
-
-# --- FEEDBACK TAB ---
+# --- FEEDBACK ---
 with tab_feedback:
-    st.header("📩 User Feedback")
-    fb = st.text_area("Write your feedback here...", height=150)
-    if st.button("🚀 Send Feedback", use_container_width=True):
-        if fb:
-            if send_mail(MY_GMAIL, "New Feedback", f"User: {st.session_state.user_email}\n\n{fb}"):
-                st.success("Sent to Siddique! ✅")
-            else: st.error("Error sending mail.")
-        else: st.warning("Please write something.")
-            
+    st.markdown("<h2 style='color:#00ff88;'>📩 User Feedback</h2>", unsafe_allow_html=True)
+    st.markdown('<div class="settings-card">', unsafe_allow_html=True)
+    fb = st.text_area("How was your experience?", placeholder="Type here...", height=150)
+    if st.button("🚀 Submit to Siddique", use_container_width=True):
+        if fb and send_mail(MY_GMAIL, "AI Feedback", f"User: {st.session_state.user_email}\n\n{fb}"):
+            st.success("Feedback sent successfully! ✅")
+        else: st.error("Failed to send. Please check input.")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
