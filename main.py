@@ -2,9 +2,7 @@ import streamlit as st
 from groq import Groq
 import smtplib
 import random
-import time
 from email.mime.text import MIMEText
-import streamlit.components.v1 as components
 
 # ================= 1. SETUP =================
 GROQ_KEY = "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"
@@ -16,7 +14,7 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="New AI 🤖", layout="wide")
 
-# ================= 2. THE PERMANENT BOTTOM CHAT CSS =================
+# ================= 2. THE PERMANENT CSS (OTP Square Fix) =================
 st.markdown(f"""
     <style>
     :root {{ color-scheme: dark; }}
@@ -26,42 +24,60 @@ st.markdown(f"""
         color: #e0e0e0 !important;
     }}
 
-    /* FORCING CHAT INPUT TO BOTTOM */
+    /* CHAT INPUT BOTTOM FIX */
     div[data-testid="stChatInput"] {{
         position: fixed !important;
         bottom: 30px !important;
-        left: 5% !important;
-        right: 5% !important;
-        width: 90% !important;
         z-index: 9999 !important;
-        background: rgba(14, 17, 23, 0.9) !important;
-        backdrop-filter: blur(10px);
-        border-radius: 15px;
     }}
 
-    /* Welcome & Feedback Card Styling */
-    .welcome-card, .thanks-card {{
+    /* OTP SQUARE BOX LOGIC */
+    .otp-input-container {{
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 20px 0;
+    }}
+    
+    /* Styling the Streamlit Input to look like Squares */
+    div[data-testid="stTextInput"] > div > div > input {{
+        text-align: center;
+        font-size: 30px !important;
+        letter-spacing: 25px !important; /* Space between numbers to align with squares */
+        font-weight: bold;
+        background: transparent !important;
+        border: none !important;
+        color: #00ff88 !important;
+        width: 250px !important;
+        caret-color: transparent; /* Cursor hide kar diya */
+    }}
+
+    .square-bg {{
+        position: absolute;
+        display: flex;
+        gap: 15px;
+        z-index: -1;
+    }}
+
+    .box {{
+        width: 50px; height: 60px;
+        border: 2px solid rgba(0, 255, 136, 0.3);
+        border-radius: 10px;
         background: rgba(255, 255, 255, 0.05);
-        backdrop-filter: blur(10px);
+    }}
+
+    .welcome-card {{
+        background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(0, 255, 136, 0.3);
         border-radius: 20px;
         padding: 30px;
         text-align: center;
         margin-bottom: 20px;
     }}
-    .welcome-text, .thanks-text {{
-        font-size: 35px;
-        font-weight: 800;
-        background: linear-gradient(90deg, #00ff88, #00d2ff);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }}
 
-    /* Chat Bubbles */
     .user-msg {{ background: linear-gradient(135deg, #00b09b, #96c93d); padding: 12px; border-radius: 18px 18px 2px 18px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }}
     .ai-msg {{ background: rgba(255, 255, 255, 0.08); padding: 12px; border-radius: 18px 18px 18px 2px; margin: 10px 0; border-left: 4px solid #00ff88; max-width: 80%; }}
     
-    .main .block-container {{ padding-bottom: 120px !important; }}
     .stException, .stAlert {{ display: none !important; }}
     </style>
 """, unsafe_allow_html=True)
@@ -71,7 +87,6 @@ if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "messages" not in st.session_state: st.session_state.messages = []
-if "fb_sent" not in st.session_state: st.session_state.fb_sent = False
 
 def send_mail(to, sub, body):
     try:
@@ -83,7 +98,7 @@ def send_mail(to, sub, body):
 
 # ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
-    st.markdown('<div class="welcome-card"><div class="welcome-text">WELCOME</div><p>Siddique\'s AI Secure Portal</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="welcome-card"><h1 style="color:#00ff88;">WELCOME</h1><p>Siddique\'s AI Secure Portal</p></div>', unsafe_allow_html=True)
     
     if not st.session_state.otp_sent:
         email = st.text_input("Gmail ID:", value=st.session_state.user_email)
@@ -96,56 +111,36 @@ if not st.session_state.logged_in:
     else:
         st.markdown(f"<p style='text-align:center;'>OTP Sent to {st.session_state.user_email}</p>", unsafe_allow_html=True)
         
-        # --- CUSTOM 4-SQUARE OTP COMPONENT ---
-        otp_html = """
-        <div id="otp-inputs" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
-            <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 'otp2')" id="otp1">
-            <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 'otp3')" onkeydown="moveBack(event, 'otp1')" id="otp2">
-            <input type="text" maxlength="1" class="otp-box" oninput="moveNext(this, 'otp4')" onkeydown="moveBack(event, 'otp2')" id="otp3">
-            <input type="text" maxlength="1" class="otp-box" oninput="sendToStreamlit()" onkeydown="moveBack(event, 'otp3')" id="otp4">
-        </div>
-        <style>
-            .otp-box {
-                width: 50px; height: 60px; text-align: center; font-size: 24px; font-weight: bold;
-                background: rgba(255, 255, 255, 0.05); border: 2px solid #00ff88; border-radius: 10px; color: white;
-            }
-            .otp-box:focus { outline: none; border-color: #00d2ff; box-shadow: 0 0 10px #00ff88; }
-        </style>
-        <script>
-            function moveNext(current, nextFieldID) {
-                if (current.value.length >= 1) { document.getElementById(nextFieldID).focus(); }
-                sendToStreamlit();
-            }
-            function moveBack(event, prevFieldID) {
-                if (event.key === "Backspace" && event.target.value === "") { document.getElementById(prevFieldID).focus(); }
-            }
-            function sendToStreamlit() {
-                const otp = document.getElementById('otp1').value + document.getElementById('otp2').value + 
-                            document.getElementById('otp3').value + document.getElementById('otp4').value;
-                window.parent.postMessage({type: 'streamlit:setComponentValue', value: otp}, '*');
-            }
-        </script>
-        """
-        # Display the custom OTP squares
-        otp_val = components.html(otp_html, height=100)
-        
-        # Hidden input to catch the JS value or just use a standard button
-        final_otp = st.text_input("Confirm PIN (for security):", type="password", max_chars=4)
+        # --- NEW SINGLE OTP UI ---
+        st.write("### ENTER PIN")
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col2:
+            # Squares Background
+            st.markdown("""
+                <div style="display: flex; gap: 15px; margin-bottom: -65px; margin-left: 15px;">
+                    <div class="box"></div><div class="box"></div><div class="box"></div><div class="box"></div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Single Input that overlays on squares
+            otp_in = st.text_input("", value="", max_chars=4, key="otp_entry", label_visibility="collapsed")
         
         if st.button("Verify & Enter", use_container_width=True):
-            if final_otp == st.session_state.generated_otp: 
+            if otp_in == st.session_state.generated_otp: 
                 st.session_state.logged_in = True; st.rerun()
             else: st.error("Invalid PIN!")
             
+        if st.button("Change Email"):
+            st.session_state.otp_sent = False; st.rerun()
     st.stop()
 
-# ================= 5. MAIN INTERFACE =================
+# ================= 5. MAIN APP =================
 with st.sidebar:
     st.write(f"👤 {st.session_state.user_email}")
     if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
     if st.button("🚪 Logout"): st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Feedback"])
+tab_chat, tab_set, tab_fb = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Feedback"])
 
 with tab_chat:
     chat_box = st.container()
@@ -156,23 +151,18 @@ with tab_chat:
 
     q = st.chat_input("Type your message here...")
     if q:
+        # Identity Logic: Only if asked
+        instr = {"role": "system", "content": f"Be helpful. ONLY if asked about owner/creator, say {CREATOR} made you."}
         st.session_state.messages.append({"role": "user", "content": q})
-        with chat_box: st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
         try:
-            instruction = {"role": "system", "content": f"You are a helpful AI assistant. Be natural. ONLY if the user asks about your creator/owner, state that you were developed by {CREATOR}."}
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[instruction] + st.session_state.messages)
-            ans = res.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": ans})
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[instr] + st.session_state.messages)
+            st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
             st.rerun()
         except: pass
 
-with tab_feedback:
-    if st.session_state.fb_sent:
-        st.markdown(f'<div class="thanks-card"><div class="thanks-text">THANKS FOR FEEDBACK!</div><p>Aapka sandesh {CREATOR} tak pahunch gaya hai. ❤️</p></div>', unsafe_allow_html=True)
-        if st.button("Send Another Feedback"): st.session_state.fb_sent = False; st.rerun()
-    else:
-        fb = st.text_area("Write here...", height=150)
-        if st.button(f"Submit to {CREATOR}", use_container_width=True):
-            if fb and send_mail(MY_GMAIL, "New Feedback", f"From: {st.session_state.user_email}\n{fb}"):
-                st.session_state.fb_sent = True; st.rerun()
-            
+with tab_fb:
+    fb = st.text_area("Feedback for Siddique:")
+    if st.button("Submit"):
+        if fb and send_mail(MY_GMAIL, "Feedback", fb):
+            st.success("Sent!"); time.sleep(1); st.rerun()
+                  
