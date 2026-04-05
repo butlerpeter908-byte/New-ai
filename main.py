@@ -38,6 +38,24 @@ st.markdown("""
         border-radius: 15px;
     }
 
+    /* OTP PIN BOX STYLING */
+    .otp-container {
+        display: flex;
+        justify-content: center;
+        margin: 20px 0;
+    }
+    
+    /* Targeting the input specifically for PIN look */
+    div[data-testid="stTextInput"] input {
+        text-align: center;
+        font-size: 24px !important;
+        letter-spacing: 10px;
+        font-weight: bold;
+        border: 2px solid #00ff88 !important;
+        border-radius: 12px !important;
+        background: rgba(255, 255, 255, 0.05) !important;
+    }
+
     /* Welcome & Feedback Card Styling */
     .welcome-card, .thanks-card {
         background: rgba(255, 255, 255, 0.05);
@@ -60,9 +78,7 @@ st.markdown("""
     .user-msg { background: linear-gradient(135deg, #00b09b, #96c93d); padding: 12px; border-radius: 18px 18px 2px 18px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
     .ai-msg { background: rgba(255, 255, 255, 0.08); padding: 12px; border-radius: 18px 18px 18px 2px; margin: 10px 0; border-left: 4px solid #00ff88; max-width: 80%; }
     
-    /* Ensuring enough space at bottom for chat input */
     .main .block-container { padding-bottom: 120px !important; }
-
     .stException, .stAlert { display: none !important; }
     </style>
 """, unsafe_allow_html=True)
@@ -85,9 +101,9 @@ def send_mail(to, sub, body):
 # ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
     st.markdown('<div class="welcome-card"><div class="welcome-text">WELCOME</div><p>Siddique\'s AI Secure Portal</p></div>', unsafe_allow_html=True)
-    email = st.text_input("Gmail ID:", value=st.session_state.user_email)
     
     if not st.session_state.otp_sent:
+        email = st.text_input("Gmail ID:", value=st.session_state.user_email, placeholder="Enter your email...")
         if st.button("Send Secure OTP", use_container_width=True):
             if "@gmail.com" in email:
                 otp = str(random.randint(1000, 9999))
@@ -95,17 +111,31 @@ if not st.session_state.logged_in:
                     st.session_state.generated_otp = otp; st.session_state.user_email = email
                     st.session_state.otp_sent = True; st.rerun()
     else:
-        st.info(f"OTP Sent! Check {st.session_state.user_email}")
-        otp_in = st.text_input("OTP Daalein:", type="password")
+        st.markdown(f"<p style='text-align:center;'>OTP Sent to <b>{st.session_state.user_email}</b></p>", unsafe_allow_html=True)
+        
+        # OTP PIN BOX
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            otp_in = st.text_input("ENTER PIN", type="password", max_chars=4, help="Enter 4-digit OTP")
+        
         if st.button("Verify & Enter", use_container_width=True):
-            if otp_in == st.session_state.generated_otp: st.session_state.logged_in = True; st.rerun()
+            if otp_in == st.session_state.generated_otp: 
+                st.session_state.logged_in = True
+                st.rerun()
+            else:
+                st.error("Invalid OTP!")
+        
+        if st.button("Back to Email", use_container_width=False):
+            st.session_state.otp_sent = False
+            st.rerun()
+            
     st.stop()
 
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
     st.write(f"👤 {st.session_state.user_email}")
     if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
-    if st.button("🚪 Logout"): st.session_state.logged_in = False; st.rerun()
+    if st.button("🚪 Logout"): st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
 tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Feedback"])
 
@@ -122,15 +152,10 @@ with tab_chat:
         st.session_state.messages.append({"role": "user", "content": q})
         with chat_box: st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
         try:
-            # Smart Identity Logic: Sirf puchne par hi batayega
-            instruction = {"role": "system", "content": f"You are a helpful AI assistant. Be natural. ONLY if the user asks about your creator, owner, developer, or who made you, state that you were developed by {CREATOR}. Don't mention this in every message."}
-            
-            messages_with_identity = [instruction] + st.session_state.messages
-            
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages_with_identity)
+            instruction = {"role": "system", "content": f"You are a helpful AI assistant. ONLY if the user asks about your creator/owner, state that you were developed by {CREATOR}."}
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[instruction] + st.session_state.messages)
             ans = res.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": ans})
-            with chat_box: st.markdown(f'<div class="ai-msg">{ans}</div>', unsafe_allow_html=True)
             st.rerun()
         except: pass
 
@@ -143,12 +168,7 @@ with tab_settings:
 # --- FEEDBACK TAB ---
 with tab_feedback:
     if st.session_state.fb_sent:
-        st.markdown(f"""
-            <div class="thanks-card">
-                <div class="thanks-text">THANKS FOR FEEDBACK!</div>
-                <p>Aapka sandesh {CREATOR} tak pahunch gaya hai. ❤️</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f'<div class="thanks-card"><div class="thanks-text">THANKS FOR FEEDBACK!</div><p>Aapka sandesh {CREATOR} tak pahunch gaya hai. ❤️</p></div>', unsafe_allow_html=True)
         if st.button("Send Another Feedback"):
             st.session_state.fb_sent = False; st.rerun()
     else:
@@ -157,4 +177,4 @@ with tab_feedback:
         if st.button(f"Submit to {CREATOR}", use_container_width=True):
             if fb and send_mail(MY_GMAIL, "New Feedback", f"From: {st.session_state.user_email}\n{fb}"):
                 st.session_state.fb_sent = True; st.rerun()
-    
+            
