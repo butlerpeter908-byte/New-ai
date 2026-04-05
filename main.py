@@ -26,7 +26,7 @@ st.markdown("""
     footer {visibility: hidden;}
     div[data-testid="stStatusWidget"] {visibility: hidden;}
 
-    /* Animated Gradient Background for Login & App */
+    /* Animated Gradient Background */
     .stApp { 
         background: linear-gradient(-45deg, #0f172a, #051937, #004d40, #0d1117);
         background-size: 400% 400%;
@@ -76,6 +76,12 @@ st.markdown("""
     .ai-msg { background: #1e293b; color: #fff; padding: 12px; border-radius: 15px 15px 15px 0; margin: 10px 0; border-left: 5px solid #00d2ff; max-width: 85%; }
     
     .main .block-container { padding-bottom: 150px !important; }
+
+    /* Custom Red Buttons for Logout/Clear */
+    .stButton>button[kind="secondary"] {
+        color: #ff4b4b !important;
+        border-color: #ff4b4b !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -116,12 +122,11 @@ if not st.session_state.logged_in:
     st.stop()
 
 # ================= 5. MAIN INTERFACE =================
+# Sidebar is now empty or just shows User Email
 with st.sidebar:
-    st.markdown(f"### User: `{st.session_state.user_email}`")
-    if st.button("🗑️ Clear Chat"): st.session_state.messages = []; st.rerun()
-    if st.button("🚪 Logout"): st.session_state.logged_in = False; st.rerun()
+    st.markdown(f"### User: \n`{st.session_state.user_email}`")
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Privacy & Terms", "📩 Support"])
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
 
 # --- CHAT TAB ---
 with tab_chat:
@@ -144,9 +149,26 @@ with tab_chat:
             st.rerun()
         except: pass
 
-# --- SETTINGS / PRIVACY TAB ---
+# --- SETTINGS / ACCOUNT TAB ---
 with tab_settings:
-    st.header("⚙️ Privacy & Terms")
+    st.header("⚙️ Account Controls")
+    
+    # Action Buttons moved here
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("🗑️ Clear All Chat", use_container_width=True):
+            st.session_state.messages = []
+            st.success("Chat cleared!")
+            time.sleep(1)
+            st.rerun()
+    with col2:
+        if st.button("🚪 Logout Session", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.otp_sent = False
+            st.rerun()
+
+    st.divider()
+    st.header("🛡️ Privacy & Terms")
     
     with st.expander("🛡️ Privacy Policy"):
         st.write(f"""
@@ -168,10 +190,11 @@ with tab_settings:
 with tab_feedback:
     if st.session_state.fb_sent:
         st.success("Feedback sent successfully!")
+        if st.button("Send Another"): st.session_state.fb_sent = False; st.rerun()
     else:
         st.header("📩 Feedback")
         fb = st.text_area("Write your message...", height=150)
         if st.button("Submit to Siddique", use_container_width=True):
             if fb and send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\n{fb}"):
                 st.session_state.fb_sent = True; st.rerun()
-                
+                                   
