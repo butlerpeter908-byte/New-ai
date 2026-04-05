@@ -122,7 +122,12 @@ with tab_chat:
         st.session_state.messages.append({"role": "user", "content": q})
         with chat_box: st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
         try:
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=st.session_state.messages)
+            # Smart Identity Logic: Sirf puchne par hi batayega
+            instruction = {"role": "system", "content": f"You are a helpful AI assistant. Be natural. ONLY if the user asks about your creator, owner, developer, or who made you, state that you were developed by {CREATOR}. Don't mention this in every message."}
+            
+            messages_with_identity = [instruction] + st.session_state.messages
+            
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages_with_identity)
             ans = res.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": ans})
             with chat_box: st.markdown(f'<div class="ai-msg">{ans}</div>', unsafe_allow_html=True)
@@ -138,10 +143,10 @@ with tab_settings:
 # --- FEEDBACK TAB ---
 with tab_feedback:
     if st.session_state.fb_sent:
-        st.markdown("""
+        st.markdown(f"""
             <div class="thanks-card">
                 <div class="thanks-text">THANKS FOR FEEDBACK!</div>
-                <p>Aapka sandesh Siddique tak pahunch gaya hai. ❤️</p>
+                <p>Aapka sandesh {CREATOR} tak pahunch gaya hai. ❤️</p>
             </div>
         """, unsafe_allow_html=True)
         if st.button("Send Another Feedback"):
@@ -149,7 +154,7 @@ with tab_feedback:
     else:
         st.header("📩 Feedback")
         fb = st.text_area("Write here...", height=150)
-        if st.button("Submit to Siddique", use_container_width=True):
+        if st.button(f"Submit to {CREATOR}", use_container_width=True):
             if fb and send_mail(MY_GMAIL, "New Feedback", f"From: {st.session_state.user_email}\n{fb}"):
                 st.session_state.fb_sent = True; st.rerun()
     
