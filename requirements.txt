@@ -3,3 +3,6 @@ groq
 gtts
 streamlit-mic-recorder
 pytz
+streamlit
+groq
+pytz
