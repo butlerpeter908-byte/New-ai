@@ -6,15 +6,20 @@ import time
 from email.mime.text import MIMEText
 from datetime import datetime
 import pytz
+import requests
+import io
 
 # ================= 1. SETUP & CONFIG =================
 GROQ_KEY = "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"
+HF_KEY = "Hf_tpmvquYeKzvBidpnGzBQTWrJEXgLMraKix" 
+
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 CREATOR = "Siddique Mohd Saif"
 
-# Client Initialization
+# Clients & API URLs
 client = Groq(api_key=GROQ_KEY)
+HF_API_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell"
 
 st.set_page_config(page_title="Siddique AI 🤖", layout="wide")
 
@@ -27,9 +32,7 @@ def get_ist_time():
 st.markdown("""
     <style>
     :root { color-scheme: dark; }
-    #MainMenu {visibility: hidden;}
-    header {visibility: hidden;}
-    footer {visibility: hidden;}
+    #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
     
     .stApp { 
         background: linear-gradient(-45deg, #0f172a, #051937, #004d40, #0d1117);
@@ -37,13 +40,8 @@ st.markdown("""
         animation: gradient 15s ease infinite;
         color: #e0e0e0 !important;
     }
-    @keyframes gradient {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
+    @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
 
-    /* Chat Input Styling */
     div[data-testid="stChatInput"] {
         position: fixed !important;
         bottom: 30px !important;
@@ -57,38 +55,19 @@ st.markdown("""
         border-radius: 15px;
     }
 
-    .welcome-card {
-        background: rgba(255, 255, 255, 0.05);
-        border: 2px solid #00ff88;
-        border-radius: 25px;
-        padding: 40px;
-        text-align: center;
-    }
-    
-    .note-text {
-        color: #ffcc00;
-        font-size: 14px;
-        font-style: italic;
-        margin-top: 10px;
-        border: 1px solid rgba(255, 204, 0, 0.3);
-        padding: 5px 10px;
-        border-radius: 8px;
-        display: inline-block;
-    }
-
-    .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
+    .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; font-weight: 500;}
     .ai-msg { background: #1e293b; color: #fff; padding: 12px; border-radius: 15px 15px 15px 0; margin: 10px 0; border-left: 5px solid #00d2ff; max-width: 85%; }
+    .welcome-card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00ff88; border-radius: 25px; padding: 40px; text-align: center; margin-bottom: 20px; }
     
     .main .block-container { padding-bottom: 150px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION STATE MANAGEMENT =================
+# ================= 3. SESSION & HELPER FUNCTIONS =================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "user_email" not in st.session_state: st.session_state.user_email = ""
 if "messages" not in st.session_state: st.session_state.messages = []
-if "fb_sent" not in st.session_state: st.session_state.fb_sent = False
 
 def send_mail(to, sub, body):
     try:
@@ -98,38 +77,47 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
+def query_image(prompt):
+    headers = {"Authorization": f"Bearer {HF_KEY}"}
+    try:
+        response = requests.post(HF_API_URL, headers=headers, json={"inputs": prompt}, timeout=40)
+        if response.status_code == 200:
+            return io.BytesIO(response.content)
+    except: return None
+    return None
+
 # ================= 4. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
-    st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Professional Secure Access</p><div class="note-text"><b>Note:</b> Use Dark Mode theme for best experience 🌙</div></div>', unsafe_allow_html=True)
-    st.write("")
+    st.markdown(f'<div class="welcome-card"><h1 style="color:#00ff88;">SIDDIQUE AI</h1><p>Image Generation + Secure Smart Chat</p><p style="font-size:12px; color:#aaa;">Developed by {CREATOR}</p></div>', unsafe_allow_html=True)
     
-    email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
+    email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email, placeholder="example@gmail.com")
     
     if not st.session_state.otp_sent:
         if st.button("Send Access PIN", use_container_width=True):
             if "@gmail.com" in email:
                 otp = str(random.randint(1000, 9999))
-                if send_mail(email, "Access Code", f"Aapka Secret PIN: {otp}"):
+                if send_mail(email, "Siddique AI Access Code", f"Aapka Secret PIN: {otp}"):
                     st.session_state.generated_otp = otp
                     st.session_state.user_email = email
                     st.session_state.otp_sent = True
                     st.rerun()
-            else: st.error("Please enter a valid @gmail.com address")
+                else: st.error("Email bhejte waqt error aaya. Check Internet.")
+            else: st.error("Kripya ek valid @gmail.com address dalein.")
     else:
-        st.success(f"PIN sent to {st.session_state.user_email}")
-        otp_in = st.text_input("Enter PIN:", type="password")
+        st.success(f"PIN aapke email ({st.session_state.user_email}) par bhej diya gaya hai.")
+        otp_in = st.text_input("Enter 4-Digit PIN:", type="password")
         
-        col_log, col_back = st.columns(2)
-        with col_log:
-            if st.button("Verify & Launch", use_container_width=True):
-                if otp_in == st.session_state.generated_otp: 
-                    notification = f"User: {st.session_state.user_email}\nTime (IST): {get_ist_time()}"
-                    send_mail(MY_GMAIL, "New Login 🚨", notification)
+        col_verify, col_edit = st.columns(2)
+        with col_verify:
+            if st.button("Verify & Login", use_container_width=True):
+                if otp_in == st.session_state.generated_otp:
+                    log_msg = f"User Login: {st.session_state.user_email}\nTime: {get_ist_time()}"
+                    send_mail(MY_GMAIL, "New Login Detected 🚨", log_msg)
                     st.session_state.logged_in = True
                     st.rerun()
-                else: st.error("Incorrect PIN!")
-        with col_back:
-            if st.button("Edit Email", use_container_width=True):
+                else: st.error("Galat PIN! Dubara koshish karein.")
+        with col_edit:
+            if st.button("Change Email", use_container_width=True):
                 st.session_state.otp_sent = False
                 st.rerun()
     st.stop()
@@ -142,69 +130,71 @@ with st.sidebar:
         st.session_state.logged_in = False
         st.session_state.otp_sent = False
         st.rerun()
+    st.info(f"Creator: {CREATOR}\nVersion: 1.3.0")
 
 tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "🛡️ Account & Privacy", "📩 Support"])
 
-# --- CHAT LOGIC ---
+# --- CHAT & IMAGE LOGIC ---
 with tab_chat:
-    chat_holder = st.container()
-    with chat_holder:
+    chat_container = st.container()
+    with chat_container:
         for m in st.session_state.messages:
-            div_style = "user-msg" if m["role"] == "user" else "ai-msg"
-            st.markdown(f'<div class="{div_style}">{m["content"]}</div>', unsafe_allow_html=True)
+            if m["type"] == "img":
+                st.image(m["content"], caption="Generated by Siddique AI", use_column_width=True)
+            else:
+                div_style = "user-msg" if m["role"] == "user" else "ai-msg"
+                st.markdown(f'<div class="{div_style}">{m["content"]}</div>', unsafe_allow_html=True)
 
-    user_query = st.chat_input("Ask me anything...")
+    user_query = st.chat_input("Baat karo ya bolo 'image banao'...")
     if user_query:
-        st.session_state.messages.append({"role": "user", "content": user_query})
-        with chat_holder: st.markdown(f'<div class="user-msg">{user_query}</div>', unsafe_allow_html=True)
+        # Add user query to history
+        st.session_state.messages.append({"role": "user", "content": user_query, "type": "text"})
+        with chat_container: st.markdown(f'<div class="user-msg">{user_query}</div>', unsafe_allow_html=True)
         
-        try:
-            sys_msg = {"role": "system", "content": f"You are a helpful AI. Created by {CREATOR}."}
-            response = client.chat.completions.create(
-                model="llama-3.1-8b-instant",
-                messages=[sys_msg] + st.session_state.messages
-            )
-            ai_ans = response.choices[0].message.content
-            st.session_state.messages.append({"role": "assistant", "content": ai_ans})
-            st.rerun()
-        except Exception as e:
-            st.error(f"API Error: {e}")
+        # Keyword Detection for Image Generation
+        img_triggers = ["image", "photo", "banao", "generate", "picture", "drawing", "painting", "pic"]
+        is_image = any(word in user_query.lower() for word in img_triggers)
 
-# --- SETTINGS TAB ---
+        if is_image:
+            with st.spinner("Siddique AI aapki image taiyar kar raha hai..."):
+                img_data = query_image(user_query)
+                if img_data:
+                    st.session_state.messages.append({"role": "assistant", "content": img_data, "type": "img"})
+                    st.rerun()
+                else:
+                    st.error("Image generation failed. Check API limit or Key.")
+        else:
+            # Regular AI Chat
+            try:
+                # Filter context to text only
+                text_history = [m for m in st.session_state.messages if m["type"] == "text"]
+                response = client.chat.completions.create(
+                    model="llama-3.1-8b-instant",
+                    messages=[{"role": "system", "content": f"You are a smart AI assistant. Your creator is {CREATOR}."}] + text_history
+                )
+                ai_text = response.choices[0].message.content
+                st.session_state.messages.append({"role": "assistant", "content": ai_text, "type": "text"})
+                st.rerun()
+            except Exception as e:
+                st.error(f"Chat Error: {e}")
+
+# --- SETTINGS ---
 with tab_settings:
-    st.header("⚙️ Settings")
+    st.header("⚙️ Account Settings")
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
-    
     st.divider()
-    st.subheader("🛡️ Legal & Privacy")
-    with st.expander("Privacy Policy"):
-        st.write("Aapka data session-based hai. Logout par history clear ho jati hai.")
-    with st.expander("Terms of Service"):
-        st.write(f"Developed by {CREATOR} for educational use.")
-    with st.expander("About App"):
-        st.write(f"**Version**: 1.1.0\n\n**Developer**: {CREATOR}")
+    st.write(f"**App Information**")
+    st.write(f"User: {st.session_state.user_email}")
+    st.write(f"Status: Securely Logged In")
 
-    st.markdown("""
-        <div style="background:rgba(0,255,136,0.1); padding:20px; border-radius:15px; border:1px solid #00ff88;">
-        <h4>📲 Install on Home Screen</h4>
-        Browser menu (3 dots ⋮) -> <b>Add to Home Screen</b>
-        </div>
-    """, unsafe_allow_html=True)
-
-# --- FEEDBACK TAB ---
+# --- FEEDBACK ---
 with tab_feedback:
-    if st.session_state.fb_sent:
-        st.success("Message sent to Siddique!")
-        if st.button("Write Another"): st.session_state.fb_sent = False; st.rerun()
-    else:
-        st.header("📩 Contact Support")
-        fb_text = st.text_area("Message...", height=150)
-        if st.button("Send to Creator", use_container_width=True):
-            if fb_text:
-                fb_msg = f"User: {st.session_state.user_email}\nTime: {get_ist_time()}\n\n{fb_text}"
-                if send_mail(MY_GMAIL, "App Feedback", fb_msg):
-                    st.session_state.fb_sent = True
-                    st.rerun()
-            
+    st.header("📩 Contact Creator")
+    fb_msg = st.text_area("Aapka message...")
+    if st.button("Send to Siddique", use_container_width=True):
+        if fb_msg:
+            full_fb = f"Feedback from {st.session_state.user_email}:\n\n{fb_msg}"
+            if send_mail(MY_GMAIL, "App Feedback", full_fb):
+                st.success("Message sent successfully!")
