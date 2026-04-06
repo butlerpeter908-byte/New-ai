@@ -61,7 +61,7 @@ st.markdown("""
         border: 1px solid #00ff88;
         border-radius: 12px;
         padding: 15px;
-        margin-top: 20px;
+        margin-top: 30px;
     }
 
     .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
@@ -138,31 +138,36 @@ with tab_chat:
             st.rerun()
         except: pass
 
-# --- SETTINGS / ACCOUNT TAB (Includes Install Button) ---
+# --- SETTINGS / ACCOUNT TAB ---
 with tab_settings:
     st.header("⚙️ Account Controls")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🗑️ Clear All Chat", use_container_width=True):
-            st.session_state.messages = []; st.rerun()
+            st.session_state.messages = []; st.success("Chat cleared!"); time.sleep(1); st.rerun()
     with col2:
         if st.button("🚪 Logout Session", use_container_width=True):
             st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
-    # --- INSTALL SECTION INSIDE SETTINGS ---
-    st.markdown('<div class="install-section"><h3>📲 Install Siddique AI on Phone</h3>', unsafe_allow_html=True)
-    st.write("Ise app ki tarah use karne ke liye browser menu (3 dots ⋮) mein jaakar **'Add to Home Screen'** ya **'Install App'** par click karein.")
-    if st.button("Download & Install (Setup)", use_container_width=True):
-        st.success("App configuration ready! Browser menu se 'Add to Home Screen' karein.")
-    st.markdown('</div>', unsafe_allow_html=True)
-
     st.divider()
-    st.header("🛡️ Privacy & Terms")
+    
+    # --- PRIVACY & ABOUT SECTION FIRST ---
+    st.header("🛡️ Privacy & Information")
     with st.expander("🛡️ Privacy Policy"):
-        st.write("Aapka chat data session-based hai. Logout karte hi delete ho jata hai.")
+        st.write("Aapka chat data session-based hai. Logout karte hi history delete ho jati hai. Hum aapka koi bhi sensitive data permanent store nahi karte.")
     with st.expander("📄 Terms and Conditions"):
-        st.write(f"Is AI ko {CREATOR} ne develop kiya hai.")
-    st.write(f"**Version**: 1.0.4 | **Developed by**: {CREATOR}")
+        st.write(f"Ye AI tool educational purposes ke liye banaya gaya hai. Iska misuse block kiya ja sakta hai. Developed by {CREATOR}.")
+    with st.expander("ℹ️ About App"):
+        st.write(f"**Version**: 1.0.5")
+        st.write(f"**Creator**: {CREATOR}")
+        st.write("Specialized in Secure AI conversations and professional UI experience.")
+
+    # --- INSTALL SECTION MOVED TO BOTTOM ---
+    st.markdown('<div class="install-section"><h3>📲 Install Siddique AI on Phone</h3>', unsafe_allow_html=True)
+    st.write("Bina browser khole use karne ke liye browser menu (3 dots ⋮) mein jaakar **'Add to Home Screen'** ya **'Install App'** par click karein.")
+    if st.button("Get Installation Setup", use_container_width=True):
+        st.success("App ready! Browser menu se 'Add to Home Screen' karein.")
+    st.markdown('</div>', unsafe_allow_html=True)
 
 # --- FEEDBACK TAB ---
 with tab_feedback:
@@ -175,4 +180,4 @@ with tab_feedback:
         if st.button("Submit to Siddique", use_container_width=True):
             if fb and send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\n{fb}"):
                 st.session_state.fb_sent = True; st.rerun()
-                
+        
