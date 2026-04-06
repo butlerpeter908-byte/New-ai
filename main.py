@@ -56,13 +56,12 @@ st.markdown("""
         text-align: center;
     }
     
-    .install-box {
-        background: rgba(0, 255, 136, 0.1);
-        border: 2px dashed #00ff88;
-        border-radius: 15px;
-        padding: 20px;
-        margin: 15px 0;
-        text-align: center;
+    .install-section {
+        background: rgba(0, 255, 136, 0.05);
+        border: 1px solid #00ff88;
+        border-radius: 12px;
+        padding: 15px;
+        margin-top: 20px;
     }
 
     .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
@@ -116,7 +115,7 @@ if not st.session_state.logged_in:
 with st.sidebar:
     st.markdown(f"### Logged in as: \n`{st.session_state.user_email}`")
 
-tab_chat, tab_install, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "📥 Download & Install", "⚙️ Account & Privacy", "📩 Support"])
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
 
 # --- CHAT TAB ---
 with tab_chat:
@@ -139,23 +138,7 @@ with tab_chat:
             st.rerun()
         except: pass
 
-# --- INSTALL TAB ---
-with tab_install:
-    st.markdown('<div class="install-box"><h2>📲 Install Siddique AI</h2><p>Ise apne phone par app ki tarah use karein</p></div>', unsafe_allow_html=True)
-    
-    st.info("### Android Users (Chrome):")
-    st.write("1. Browser ke upar right side mein **3 dots (⋮)** par click karein.")
-    st.write("2. **'Install App'** ya **'Add to Home Screen'** par click karein.")
-    st.write("3. Ye aapke mobile screen par ek icon ban jayega.")
-    
-    st.warning("### iPhone Users (Safari):")
-    st.write("1. Niche center mein **Share** button par click karein.")
-    st.write("2. Scroll karke **'Add to Home Screen'** select karein.")
-    
-    if st.button("Confirm Installation Setup"):
-        st.success("App configuration ready! Ab aap browser menu se install kar sakte hain.")
-
-# --- SETTINGS TAB ---
+# --- SETTINGS / ACCOUNT TAB (Includes Install Button) ---
 with tab_settings:
     st.header("⚙️ Account Controls")
     col1, col2 = st.columns(2)
@@ -166,12 +149,20 @@ with tab_settings:
         if st.button("🚪 Logout Session", use_container_width=True):
             st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
+    # --- INSTALL SECTION INSIDE SETTINGS ---
+    st.markdown('<div class="install-section"><h3>📲 Install Siddique AI on Phone</h3>', unsafe_allow_html=True)
+    st.write("Ise app ki tarah use karne ke liye browser menu (3 dots ⋮) mein jaakar **'Add to Home Screen'** ya **'Install App'** par click karein.")
+    if st.button("Download & Install (Setup)", use_container_width=True):
+        st.success("App configuration ready! Browser menu se 'Add to Home Screen' karein.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
     st.divider()
     st.header("🛡️ Privacy & Terms")
     with st.expander("🛡️ Privacy Policy"):
         st.write("Aapka chat data session-based hai. Logout karte hi delete ho jata hai.")
     with st.expander("📄 Terms and Conditions"):
         st.write(f"Is AI ko {CREATOR} ne develop kiya hai.")
+    st.write(f"**Version**: 1.0.4 | **Developed by**: {CREATOR}")
 
 # --- FEEDBACK TAB ---
 with tab_feedback:
@@ -184,4 +175,4 @@ with tab_feedback:
         if st.button("Submit to Siddique", use_container_width=True):
             if fb and send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\n{fb}"):
                 st.session_state.fb_sent = True; st.rerun()
-    
+                
