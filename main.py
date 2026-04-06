@@ -8,7 +8,8 @@ from datetime import datetime
 import pytz
 
 # ================= 1. SETUP =================
-GROQ_KEY = "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"
+# Aapki nayi API Key yahan update kar di hai
+GROQ_KEY = "Gsk_qEg4Al1xTCU2OUUW76rNWGdyb3FYZnQcUqWwwlD1Hh1deB7C9s7f"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 CREATOR = "Siddique Mohd Saif"
@@ -105,7 +106,6 @@ with tab_chat:
         st.session_state.messages.append({"role": "user", "content": q})
         st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
         try:
-            # System prompt to ensure AI knows you
             messages = [{"role": "system", "content": f"You are a helpful AI created by {CREATOR}."}] + st.session_state.messages
             res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages)
             ans = res.choices[0].message.content
@@ -129,6 +129,6 @@ with tab_settings:
 with tab_feedback:
     fb = st.text_area("Write feedback...")
     if st.button("Submit"):
-        if send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\n{fb}"):
+        if send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\nTime: {get_ist_time()}\n\n{fb}"):
             st.success("Sent!"); time.sleep(1); st.rerun()
-                          
+    
