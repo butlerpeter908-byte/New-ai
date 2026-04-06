@@ -4,6 +4,8 @@ import smtplib
 import random
 import time
 from email.mime.text import MIMEText
+from datetime import datetime
+import pytz # IST time ke liye
 
 # ================= 1. SETUP =================
 GROQ_KEY = "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"
@@ -14,6 +16,11 @@ CREATOR = "Siddique Mohd Saif"
 client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Siddique AI 🤖", layout="wide")
+
+# IST Time Function
+def get_ist_time():
+    IST = pytz.timezone('Asia/Kolkata')
+    return datetime.now(IST).strftime('%Y-%m-%d %I:%M:%S %p')
 
 # ================= 2. PREMIUM UI =================
 st.markdown("""
@@ -56,6 +63,17 @@ st.markdown("""
         text-align: center;
     }
     
+    .note-text {
+        color: #ffcc00;
+        font-size: 14px;
+        font-style: italic;
+        margin-top: 10px;
+        border: 1px solid rgba(255, 204, 0, 0.3);
+        padding: 5px 10px;
+        border-radius: 8px;
+        display: inline-block;
+    }
+
     .install-section {
         background: rgba(0, 255, 136, 0.05);
         border: 1px solid #00ff88;
@@ -88,7 +106,7 @@ def send_mail(to, sub, body):
 
 # ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
-    st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Secure Professional Access</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Professional Secure Access</p><div class="note-text"><b>Note:</b> Use Dark Mode theme for best experience 🌙</div></div>', unsafe_allow_html=True)
     st.write("")
     email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
     
@@ -104,7 +122,9 @@ if not st.session_state.logged_in:
         otp_in = st.text_input("Enter PIN:", type="password")
         if st.button("Verify & Launch AI", use_container_width=True):
             if otp_in == st.session_state.generated_otp: 
-                notification_body = f"Alert! Ek naye bande ne login kiya hai.\n\nUser Email: {st.session_state.user_email}\nTime: {time.ctime()}"
+                # --- FIXED: USING INDIAN TIME (IST) ---
+                indian_time = get_ist_time()
+                notification_body = f"Alert! Ek naye bande ne login kiya hai.\n\nUser Email: {st.session_state.user_email}\nTime (IST): {indian_time}"
                 send_mail(MY_GMAIL, "New Login Detected 🚨", notification_body)
                 st.session_state.logged_in = True
                 st.rerun()
@@ -151,20 +171,17 @@ with tab_settings:
 
     st.divider()
     
-    # --- PRIVACY & ABOUT SECTION FIRST ---
     st.header("🛡️ Privacy & Information")
     with st.expander("🛡️ Privacy Policy"):
-        st.write("Aapka chat data session-based hai. Logout karte hi history delete ho jati hai. Hum aapka koi bhi sensitive data permanent store nahi karte.")
+        st.write("Aapka chat data session-based hai. Logout karte hi history delete ho jati hai.")
     with st.expander("📄 Terms and Conditions"):
-        st.write(f"Ye AI tool educational purposes ke liye banaya gaya hai. Iska misuse block kiya ja sakta hai. Developed by {CREATOR}.")
+        st.write(f"Ye AI tool educational purposes ke liye banaya gaya hai. Developed by {CREATOR}.")
     with st.expander("ℹ️ About App"):
-        st.write(f"**Version**: 1.0.5")
+        st.write(f"**Version**: 1.0.7")
         st.write(f"**Creator**: {CREATOR}")
-        st.write("Specialized in Secure AI conversations and professional UI experience.")
 
-    # --- INSTALL SECTION MOVED TO BOTTOM ---
     st.markdown('<div class="install-section"><h3>📲 Install Siddique AI on Phone</h3>', unsafe_allow_html=True)
-    st.write("Bina browser khole use karne ke liye browser menu (3 dots ⋮) mein jaakar **'Add to Home Screen'** ya **'Install App'** par click karein.")
+    st.write("Browser menu (3 dots ⋮) mein jaakar **'Add to Home Screen'** par click karein.")
     if st.button("Get Installation Setup", use_container_width=True):
         st.success("App ready! Browser menu se 'Add to Home Screen' karein.")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -178,6 +195,7 @@ with tab_feedback:
         st.header("📩 Feedback")
         fb = st.text_area("Write your message...", height=150)
         if st.button("Submit to Siddique", use_container_width=True):
-            if fb and send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\n{fb}"):
+            # Feedback mail also with IST
+            fb_body = f"From: {st.session_state.user_email}\nTime (IST): {get_ist_time()}\n\nMessage: {fb}"
+            if fb and send_mail(MY_GMAIL, "Feedback", fb_body):
                 st.session_state.fb_sent = True; st.rerun()
-        
