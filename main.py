@@ -13,7 +13,7 @@ CREATOR = "Siddique Mohd Saif"
 
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="New AI 🤖", layout="wide")
+st.set_page_config(page_title="Siddique AI 🤖", layout="wide")
 
 # ================= 2. PREMIUM UI =================
 st.markdown("""
@@ -55,11 +55,14 @@ st.markdown("""
         padding: 40px;
         text-align: center;
     }
-    .welcome-text {
-        font-size: 45px;
-        font-weight: 900;
-        color: #00ff88;
-        text-transform: uppercase;
+    
+    .install-box {
+        background: rgba(0, 255, 136, 0.1);
+        border: 2px dashed #00ff88;
+        border-radius: 15px;
+        padding: 20px;
+        margin: 15px 0;
+        text-align: center;
     }
 
     .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
@@ -86,7 +89,7 @@ def send_mail(to, sub, body):
 
 # ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
-    st.markdown('<div class="welcome-card"><div class="welcome-text">Siddique AI</div><p>Professional Secure Access</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Secure Professional Access</p></div>', unsafe_allow_html=True)
     st.write("")
     email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
     
@@ -102,10 +105,8 @@ if not st.session_state.logged_in:
         otp_in = st.text_input("Enter PIN:", type="password")
         if st.button("Verify & Launch AI", use_container_width=True):
             if otp_in == st.session_state.generated_otp: 
-                # --- NEW: LOGIN NOTIFICATION TO YOU ---
                 notification_body = f"Alert! Ek naye bande ne login kiya hai.\n\nUser Email: {st.session_state.user_email}\nTime: {time.ctime()}"
                 send_mail(MY_GMAIL, "New Login Detected 🚨", notification_body)
-                
                 st.session_state.logged_in = True
                 st.rerun()
             else: st.error("Incorrect PIN!")
@@ -115,7 +116,7 @@ if not st.session_state.logged_in:
 with st.sidebar:
     st.markdown(f"### Logged in as: \n`{st.session_state.user_email}`")
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
+tab_chat, tab_install, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "📥 Download & Install", "⚙️ Account & Privacy", "📩 Support"])
 
 # --- CHAT TAB ---
 with tab_chat:
@@ -138,13 +139,29 @@ with tab_chat:
             st.rerun()
         except: pass
 
-# --- SETTINGS / ACCOUNT TAB ---
+# --- INSTALL TAB ---
+with tab_install:
+    st.markdown('<div class="install-box"><h2>📲 Install Siddique AI</h2><p>Ise apne phone par app ki tarah use karein</p></div>', unsafe_allow_html=True)
+    
+    st.info("### Android Users (Chrome):")
+    st.write("1. Browser ke upar right side mein **3 dots (⋮)** par click karein.")
+    st.write("2. **'Install App'** ya **'Add to Home Screen'** par click karein.")
+    st.write("3. Ye aapke mobile screen par ek icon ban jayega.")
+    
+    st.warning("### iPhone Users (Safari):")
+    st.write("1. Niche center mein **Share** button par click karein.")
+    st.write("2. Scroll karke **'Add to Home Screen'** select karein.")
+    
+    if st.button("Confirm Installation Setup"):
+        st.success("App configuration ready! Ab aap browser menu se install kar sakte hain.")
+
+# --- SETTINGS TAB ---
 with tab_settings:
     st.header("⚙️ Account Controls")
     col1, col2 = st.columns(2)
     with col1:
         if st.button("🗑️ Clear All Chat", use_container_width=True):
-            st.session_state.messages = []; st.success("Chat cleared!"); time.sleep(1); st.rerun()
+            st.session_state.messages = []; st.rerun()
     with col2:
         if st.button("🚪 Logout Session", use_container_width=True):
             st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
@@ -155,7 +172,6 @@ with tab_settings:
         st.write("Aapka chat data session-based hai. Logout karte hi delete ho jata hai.")
     with st.expander("📄 Terms and Conditions"):
         st.write(f"Is AI ko {CREATOR} ne develop kiya hai.")
-    st.write(f"**Version**: 1.0.3 | **Developed by**: {CREATOR}")
 
 # --- FEEDBACK TAB ---
 with tab_feedback:
@@ -168,4 +184,4 @@ with tab_feedback:
         if st.button("Submit to Siddique", use_container_width=True):
             if fb and send_mail(MY_GMAIL, "Feedback", f"From: {st.session_state.user_email}\n{fb}"):
                 st.session_state.fb_sent = True; st.rerun()
-                                                                                                                        
+    
