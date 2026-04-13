@@ -9,7 +9,7 @@ import pytz # IST time ke liye zaroori hai
 
 # ================= 1. SETUP =================
 # Nayi API Key yahan update kar di gayi hai
-GROQ_KEY = "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"
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 CREATOR = "Siddique Mohd Saif"
