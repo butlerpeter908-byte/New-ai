@@ -1,6 +1,6 @@
 streamlit
 groq
-pytz
-requests
 streamlit-mic-recorder
-elevenlabs
+requests
+pytz
+edge-tts
