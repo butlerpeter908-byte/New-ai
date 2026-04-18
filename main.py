@@ -24,7 +24,7 @@ def get_ist_time():
     IST = pytz.timezone('Asia/Kolkata')
     return datetime.now(IST).strftime('%Y-%m-%d %I:%M:%S %p')
 
-# ================= 2. PREMIUM UI (Aapka Original Style) =================
+# ================= 2. PREMIUM UI =================
 st.markdown("""
     <style>
     :root { color-scheme: dark; }
@@ -75,7 +75,7 @@ def speak_ai(text):
             st.audio(res.content, format='audio/mp3', autoplay=True)
     except: pass
 
-# ================= 4. LOGIN SCREEN (Original) =================
+# ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
     st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Professional Secure Access</p></div>', unsafe_allow_html=True)
     email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
@@ -99,19 +99,18 @@ if not st.session_state.logged_in:
 
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
-    st.markdown(f"### Logged in as: \n`{st.session_state.user_email}`")
-    st.markdown(f"**Current IST:** {get_ist_time()}")
+    st.markdown(f"### Account: \n`{st.session_state.user_email}`")
+    st.markdown(f"**IST Time:** {get_ist_time()}")
     st.markdown("---")
-    st.write(f"© Developed by {CREATOR}")
+    st.info(f"Developed by {CREATOR}")
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Support"])
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
 
 with tab_chat:
     chat_box = st.container()
     
-    # Voice Input Section
     st.markdown('<div class="mic-section">', unsafe_allow_html=True)
-    audio = mic_recorder(start_prompt="Speak 🎙️", stop_prompt="Sun raha hoon... ⏳", key='voice_input')
+    audio = mic_recorder(start_prompt="Voice Assistant 🎙️", stop_prompt="Processing... ⏳", key='voice_input')
     st.markdown('</div>', unsafe_allow_html=True)
 
     with chat_box:
@@ -119,14 +118,12 @@ with tab_chat:
             div = "user-msg" if m["role"] == "user" else "ai-msg"
             st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
 
-    # Input Logic
     q = st.chat_input("Type here...")
     final_query = None
 
-    # Voice Processing
     if audio and audio['id'] != st.session_state.last_audio_id:
         st.session_state.last_audio_id = audio['id']
-        with st.spinner("Decoding..."):
+        with st.spinner("Decoding voice..."):
             trans = client.audio.transcriptions.create(file=("audio.wav", audio['bytes']), model="whisper-large-v3")
             final_query = trans.text
     elif q:
@@ -135,8 +132,8 @@ with tab_chat:
     if final_query and final_query.strip():
         st.session_state.messages.append({"role": "user", "content": final_query})
         try:
-            instruction = {"role": "system", "content": f"You are a helpful AI. ONLY if asked about creator/owner, say {CREATOR} made you."}
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[instruction] + st.session_state.messages)
+            sys = {"role": "system", "content": f"Brief response. Creator: {CREATOR}."}
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys] + st.session_state.messages)
             ans = res.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": ans})
             speak_ai(ans)
@@ -145,15 +142,31 @@ with tab_chat:
             st.error(f"Error: {e}")
 
 with tab_settings:
-    st.header("⚙️ Account Controls")
-    st.write(f"User: {st.session_state.user_email}")
+    st.header("⚙️ Settings & Legal")
+    
+    if st.button("🗑️ Clear Chat History", use_container_width=True):
+        st.session_state.messages = []
+        st.success("Chat history cleared!")
+        st.rerun()
+        
+    with st.expander("🛡️ Privacy Policy"):
+        st.write("Aapka data sirf aapke session tak mahdood hai. Hum messages ko store nahi karte.")
+        
+    with st.expander("📜 Terms & Conditions"):
+        st.write("Ise sirf valid educational aur personal use ke liye design kiya gaya hai.")
+        
+    with st.expander("ℹ️ About Siddique AI"):
+        st.write(f"Version 2.0 - Developed by **{CREATOR}**.")
+        st.write("Powered by Groq Llama 3.1 & ElevenLabs Voice.")
+
+    st.markdown("---")
     if st.button("🚪 Logout Session", use_container_width=True):
         st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
 with tab_feedback:
     st.header("📩 Feedback")
-    fb = st.text_area("Write your message...", height=150)
+    fb = st.text_area("Developer ko message bhejein...", height=150)
     if st.button("Submit to Siddique", use_container_width=True):
-        if fb and send_mail(MY_GMAIL, "Feedback", fb):
+        if fb and send_mail(MY_GMAIL, "Feedback from User", fb):
             st.success("Feedback sent!"); st.session_state.fb_sent = True
     
