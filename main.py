@@ -20,37 +20,35 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Siddique AI 🤖", layout="wide")
 
-def get_ist_time():
-    IST = pytz.timezone('Asia/Kolkata')
-    return datetime.now(IST).strftime('%Y-%m-%d %I:%M:%S %p')
-
 # ================= 2. PREMIUM UI =================
 st.markdown("""
     <style>
     :root { color-scheme: dark; }
-    #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
-    .stApp { background: linear-gradient(-45deg, #0f172a, #051937, #004d40, #0d1117); background-size: 400% 400%; animation: gradient 15s ease infinite; color: #e0e0e0 !important; }
-    @keyframes gradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-    div[data-testid="stChatInput"] { position: fixed !important; bottom: 30px !important; left: 5% !important; right: 5% !important; width: 90% !important; z-index: 9999 !important; background: rgba(15, 23, 42, 0.9) !important; backdrop-filter: blur(12px); border: 1px solid #00ff88; border-radius: 15px; }
-    .welcome-card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00ff88; border-radius: 25px; padding: 40px; text-align: center; }
-    .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; border: 1px solid rgba(0,0,0,0.1); }
+    .stApp { background: #0d1117; color: #e0e0e0; }
+    .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
     .ai-msg { background: #1e293b; color: #fff; padding: 12px; border-radius: 15px 15px 15px 0; margin: 10px 0; border-left: 5px solid #00d2ff; max-width: 85%; }
-    .main .block-container { padding-bottom: 180px !important; }
-    .mic-float { position: fixed; bottom: 100px; right: 30px; z-index: 10001; background: #1e293b; border-radius: 50%; padding: 10px; border: 2px solid #00ff88; box-shadow: 0 0 15px #00ff88; }
+    .mic-box { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 15px; text-align: center; border: 1px solid #00ff88; margin-bottom: 20px; }
+    .policy-text { font-size: 14px; color: #aaa; line-height: 1.6; }
     </style>
 """, unsafe_allow_html=True)
 
 # ================= 3. SESSION LOGIC =================
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "otp_sent" not in st.session_state:
-    st.session_state.otp_sent = False
-if "user_email" not in st.session_state:
-    st.session_state.user_email = ""
-if "last_processed_audio" not in st.session_state:
-    st.session_state.last_processed_audio = None
+if "messages" not in st.session_state: st.session_state.messages = []
+if "logged_in" not in st.session_state: st.session_state.logged_in = False
+if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
+if "user_email" not in st.session_state: st.session_state.user_email = ""
+if "last_audio_id" not in st.session_state: st.session_state.last_audio_id = None
+
+# ================= 4. FUNCTIONS =================
+def speak_ai(text):
+    try:
+        url = f"https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
+        headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
+        data = {"text": text, "model_id": "eleven_multilingual_v2", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
+        res = requests.post(url, json=data, headers=headers)
+        if res.status_code == 200:
+            st.audio(res.content, format='audio/mp3', autoplay=True)
+    except: pass
 
 def send_mail(to, sub, body):
     try:
@@ -60,106 +58,88 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
-# ================= 4. LOGIN SCREEN =================
+# ================= 5. LOGIN SCREEN =================
 if not st.session_state.logged_in:
-    st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Professional Secure Access</p></div>', unsafe_allow_html=True)
-    email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
-    
+    st.title("🔐 Secure Access")
+    email_in = st.text_input("Gmail ID:", value=st.session_state.user_email)
     if not st.session_state.otp_sent:
-        if st.button("Send Access PIN", use_container_width=True):
-            if "@gmail.com" in email:
+        if st.button("Send Access PIN"):
+            if "@gmail.com" in email_in:
                 otp = str(random.randint(1000, 9999))
-                if send_mail(email, "Access Code", f"Aapka Secret PIN: {otp}"):
-                    st.session_state.generated_otp = otp; st.session_state.user_email = email
+                if send_mail(email_in, "Access PIN", f"Aapka PIN: {otp}"):
+                    st.session_state.generated_otp = otp
+                    st.session_state.user_email = email_in
                     st.session_state.otp_sent = True; st.rerun()
     else:
-        st.success(f"PIN sent to {st.session_state.user_email}")
-        otp_in = st.text_input("Enter PIN:", type="password")
-        if st.button("Verify & Launch AI", use_container_width=True):
-            if otp_in == st.session_state.generated_otp: 
-                st.session_state.logged_in = True
-                st.rerun()
-            else: st.error("Incorrect PIN!")
+        pin_in = st.text_input("Enter PIN:", type="password")
+        if st.button("Login"):
+            if pin_in == st.session_state.generated_otp:
+                st.session_state.logged_in = True; st.rerun()
+            else: st.error("Wrong PIN")
     st.stop()
 
-# ================= 5. VOICE OUTPUT =================
-def speak_ai(text):
-    try:
-        voice_id = "21m00Tcm4TlvDq8ikWAM" # Bella Voice
-        url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
-        headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
-        data = {"text": text, "model_id": "eleven_multilingual_v2", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
-        response = requests.post(url, json=data, headers=headers)
-        if response.status_code == 200:
-            st.audio(response.content, format='audio/mp3', autoplay=True)
-    except: pass
-
-# ================= 6. MAIN CHAT INTERFACE =================
+# ================= 6. MAIN INTERFACE =================
 with st.sidebar:
-    st.markdown(f"### User: \n`{st.session_state.user_email}`")
-    st.write(f"Created by: {CREATOR}")
-    if st.button("🚪 Logout"):
-        st.session_state.logged_in = False
-        st.rerun()
+    st.title("SIDDIQUE AI 🤖")
+    st.write(f"User: {st.session_state.user_email}")
+    st.markdown("---")
+    if st.button("🚪 Logout Session"):
+        st.session_state.clear(); st.rerun()
 
-tab_chat, tab_feedback = st.tabs(["💬 Messenger", "📩 Support"])
+# --- TABS SETUP ---
+tab_chat, tab_support, tab_policies, tab_about = st.tabs(["💬 Messenger", "📩 Support", "📜 Policies", "ℹ️ About"])
 
 with tab_chat:
-    # Display Chat History
-    for m in st.session_state.messages:
-        div = "user-msg" if m["role"] == "user" else "ai-msg"
-        st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
-
-    # Floating Mic Button
-    st.markdown('<div class="mic-float">', unsafe_allow_html=True)
-    audio = mic_recorder(start_prompt="Speak 🎤", stop_prompt="Stop 🛑", key='recorder')
+    # Mic Section
+    st.markdown('<div class="mic-box">', unsafe_allow_html=True)
+    voice_data = mic_recorder(start_prompt="Boliye 🎙️", stop_prompt="Sun raha hoon... ⏳", key='voice_input')
     st.markdown('</div>', unsafe_allow_html=True)
 
-    # Logic to handle Inputs
-    user_query = None
-    
-    # 1. Handle Voice Input
-    if audio and audio != st.session_state.last_processed_audio:
-        st.session_state.last_processed_audio = audio
-        with st.spinner("Sun raha hoon..."):
-            try:
-                transcription = client.audio.transcriptions.create(
-                    file=("audio.wav", audio['bytes']),
-                    model="whisper-large-v3",
-                )
-                if transcription.text.strip():
-                    user_query = transcription.text
-            except Exception as e:
-                st.error("Voice Error")
+    # Chat Box
+    chat_container = st.container()
+    with chat_container:
+        for m in st.session_state.messages:
+            div = "user-msg" if m["role"] == "user" else "ai-msg"
+            st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
 
-    # 2. Handle Text Input
-    q = st.chat_input("Type something...")
-    if q:
-        user_query = q
+    # Input Logic
+    text_q = st.chat_input("Type here...")
+    final_q = None
 
-    # 3. Process Response
-    if user_query:
-        st.session_state.messages.append({"role": "user", "content": user_query})
-        st.markdown(f'<div class="user-msg">{user_query}</div>', unsafe_allow_html=True)
-        
-        with st.spinner("AI is thinking..."):
-            try:
-                sys_msg = {"role": "system", "content": f"You are a helpful AI. Keep responses very short and use emojis. Owner: {CREATOR}."}
-                res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys_msg] + st.session_state.messages)
-                ans = res.choices[0].message.content
-                
-                st.session_state.messages.append({"role": "assistant", "content": ans})
-                st.markdown(f'<div class="ai-msg">{ans}</div>', unsafe_allow_html=True)
-                
-                speak_ai(ans)
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error("Connection Error")
+    if voice_data and voice_data['id'] != st.session_state.last_audio_id:
+        st.session_state.last_audio_id = voice_data['id']
+        with st.spinner("Decoding..."):
+            trans = client.audio.transcriptions.create(file=("audio.wav", voice_data['bytes']), model="whisper-large-v3")
+            final_q = trans.text
+    elif text_q:
+        final_q = text_q
 
-with tab_feedback:
-    fb = st.text_area("Feedback to Creator")
-    if st.button("Send Feedback"):
-        if fb and send_mail(MY_GMAIL, "AI Feedback", fb):
-            st.success("Sent!")
-                
+    if final_q:
+        st.session_state.messages.append({"role": "user", "content": final_q})
+        try:
+            sys = {"role": "system", "content": f"Brief response. Creator: {CREATOR}."}
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys] + st.session_state.messages)
+            ans = res.choices[0].message.content
+            st.session_state.messages.append({"role": "assistant", "content": ans})
+            speak_ai(ans); st.rerun()
+        except: st.error("AI Error")
+
+with tab_support:
+    st.header("📩 Feedback & Support")
+    fb = st.text_area("Write to Siddique...")
+    if st.button("Submit Feedback"):
+        if fb and send_mail(MY_GMAIL, "User Feedback", fb):
+            st.success("Feedback sent successfully!")
+
+with tab_policies:
+    st.header("📜 Legal Information")
+    with st.expander("Privacy Policy"):
+        st.write("Hum aapka data bechte nahi hain. Sab kuch encrypted hai.")
+    with st.expander("Terms & Conditions"):
+        st.write("Ise sirf personal use ke liye istemal karein.")
+
+with tab_about:
+    st.header("ℹ️ About This AI")
+    st.write(f"Developed by: **{CREATOR}**")
+    st.write("Technologies: Groq, Llama 3.1, ElevenLabs, Streamlit.")
+            
