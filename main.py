@@ -6,9 +6,13 @@ import time
 from email.mime.text import MIMEText
 from datetime import datetime
 import pytz 
+import requests # Voice ke liye zaroori
+from streamlit_mic_recorder import mic_recorder # Mic ke liye
 
 # ================= 1. SETUP =================
 GROQ_KEY = "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"
+# ELEVENLABS KEY (Aapne jo di thi)
+ELEVEN_KEY = "sk_3660ca7856e9021fc0eecda2bc3159eee65b14a045b7f8f6"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 CREATOR = "Siddique Mohd Saif"
@@ -33,10 +37,11 @@ st.markdown("""
     .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
     .ai-msg { background: #1e293b; color: #fff; padding: 12px; border-radius: 15px 15px 15px 0; margin: 10px 0; border-left: 5px solid #00d2ff; max-width: 85%; }
     .main .block-container { padding-bottom: 150px !important; }
+    .mic-container { position: fixed; bottom: 100px; right: 40px; z-index: 10000; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION LOGIC (STABLE) =================
+# ================= 3. SESSION LOGIC =================
 def init_session():
     defaults = {
         "logged_in": False, 
@@ -51,7 +56,6 @@ def init_session():
             st.session_state[key] = value
 
 init_session()
-# =============================================================
 
 def send_mail(to, sub, body):
     try:
@@ -83,29 +87,67 @@ if not st.session_state.logged_in:
             else: st.error("Incorrect PIN!")
     st.stop()
 
-# ================= 5. MAIN INTERFACE =================
+# ================= 5. VOICE FUNCTION =================
+def speak_ai(text):
+    voice_id = "21m00Tcm4TlvDq8ikWAM" # Bella Voice ID
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+    headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
+    data = {"text": text, "model_id": "eleven_multilingual_v2", "voice_settings": {"stability": 0.5, "similarity_boost": 0.8}}
+    response = requests.post(url, json=data, headers=headers)
+    if response.status_code == 200:
+        st.audio(response.content, format='audio/mp3', autoplay=True)
+
+# ================= 6. MAIN INTERFACE =================
 with st.sidebar:
     st.markdown(f"### Logged in as: \n`{st.session_state.user_email}`")
+    st.markdown("---")
+    st.write("Voice Assistant Active 🎙️")
 
 tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
 
 with tab_chat:
     chat_box = st.container()
+    
+    # Mic integration (iPhone feel ke liye floating)
+    with st.container():
+        st.markdown('<div class="mic-container">', unsafe_allow_html=True)
+        audio = mic_recorder(start_prompt="Boliye 🎤", stop_prompt="Rukiye 🛑", key='recorder')
+        st.markdown('</div>', unsafe_allow_html=True)
+
     with chat_box:
         for m in st.session_state.messages:
             div = "user-msg" if m["role"] == "user" else "ai-msg"
             st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
 
+    # Voice Input Handling
+    user_input = None
+    if audio:
+        with st.spinner("Sun raha hoon..."):
+            transcription = client.audio.transcriptions.create(
+                file=("audio.wav", audio['bytes']),
+                model="whisper-large-v3",
+            )
+            user_input = transcription.text
+
+    # Text Input Handling
     q = st.chat_input("Type here...")
-    if q:
-        st.session_state.messages.append({"role": "user", "content": q})
-        with chat_box: st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
+    final_query = user_input if user_input else q
+
+    if final_query:
+        st.session_state.messages.append({"role": "user", "content": final_query})
+        with chat_box: st.markdown(f'<div class="user-msg">{final_query}</div>', unsafe_allow_html=True)
         try:
-            instruction = {"role": "system", "content": f"You are a helpful AI. ONLY if asked about creator/owner, say {CREATOR} made you."}
+            instruction = {"role": "system", "content": f"You are a helpful AI. Keep responses brief and friendly. ONLY if asked about creator/owner, say {CREATOR} made you."}
             res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[instruction] + st.session_state.messages)
             ans = res.choices[0].message.content
+            
             st.session_state.messages.append({"role": "assistant", "content": ans})
-            with chat_box: st.markdown(f'<div class="ai-msg">{ans}</div>', unsafe_allow_html=True)
+            with chat_box: st.markdown(f'<div class="{div}">{ans}</div>', unsafe_allow_html=True)
+            
+            # AI ab bolega bhi!
+            speak_ai(ans)
+            
+            time.sleep(1)
             st.rerun()
         except Exception as e:
             st.error(f"Error: {e}")
@@ -121,4 +163,4 @@ with tab_feedback:
     if st.button("Submit to Siddique", use_container_width=True):
         if fb and send_mail(MY_GMAIL, "Feedback", fb):
             st.success("Feedback sent!"); st.session_state.fb_sent = True
-            
+        
