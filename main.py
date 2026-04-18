@@ -6,12 +6,13 @@ import time
 from email.mime.text import MIMEText
 from datetime import datetime
 import pytz 
-import requests 
+import edge_tts
+import asyncio
+import base64
 from streamlit_mic_recorder import mic_recorder
 
 # ================= 1. SETUP =================
 GROQ_KEY = "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"
-ELEVEN_KEY = "sk_3660ca7856e9021fc0eecda2bc3159eee65b14a045b7f8f6"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 CREATOR = "Siddique Mohd Saif"
@@ -24,7 +25,7 @@ def get_ist_time():
     IST = pytz.timezone('Asia/Kolkata')
     return datetime.now(IST).strftime('%Y-%m-%d %I:%M:%S %p')
 
-# ================= 2. PREMIUM UI =================
+# ================= 2. PREMIUM UI (Original Style) =================
 st.markdown("""
     <style>
     :root { color-scheme: dark; }
@@ -51,6 +52,18 @@ def init_session():
 
 init_session()
 
+# ================= 4. FUNCTIONS =================
+async def text_to_speech(text):
+    try:
+        communicate = edge_tts.Communicate(text, "en-US-AvaNeural")
+        await communicate.save("temp_voice.mp3")
+        with open("temp_voice.mp3", "rb") as f:
+            data = f.read()
+            b64 = base64.b64encode(data).decode()
+            md = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
+            st.markdown(md, unsafe_allow_html=True)
+    except: pass
+
 def send_mail(to, sub, body):
     try:
         msg = MIMEText(body); msg['Subject'] = sub; msg['From'] = MY_GMAIL; msg['To'] = to
@@ -59,21 +72,7 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
-# UPDATED VOICE FUNCTION
-def speak_ai(text):
-    try:
-        url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
-        headers = {"xi-api-key": ELEVEN_KEY, "Content-Type": "application/json"}
-        data = {"text": text, "model_id": "eleven_multilingual_v2", "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}}
-        res = requests.post(url, json=data, headers=headers)
-        if res.status_code == 200:
-            st.audio(res.content, format='audio/mp3', autoplay=True)
-        else:
-            st.warning(f"Voice Error {res.status_code}: ElevenLabs credits may be empty.")
-    except Exception as e:
-        st.error(f"TTS Error: {e}")
-
-# ================= 4. LOGIN SCREEN =================
+# ================= 5. LOGIN SCREEN =================
 if not st.session_state.logged_in:
     st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Professional Secure Access</p></div>', unsafe_allow_html=True)
     email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
@@ -94,19 +93,19 @@ if not st.session_state.logged_in:
             else: st.error("Incorrect PIN!")
     st.stop()
 
-# ================= 5. MAIN INTERFACE =================
+# ================= 6. MAIN INTERFACE =================
 with st.sidebar:
     st.markdown(f"### Account: \n`{st.session_state.user_email}`")
-    st.markdown(f"**IST Time:** {get_ist_time()}")
+    st.markdown(f"**Current IST:** {get_ist_time()}")
     st.markdown("---")
-    st.info(f"Developed by {CREATOR}")
+    st.info(f"© Developed by {CREATOR}")
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Support"])
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings & Privacy", "📩 Support"])
 
 with tab_chat:
     chat_box = st.container()
     st.markdown('<div class="mic-section">', unsafe_allow_html=True)
-    audio = mic_recorder(start_prompt="Voice Assistant 🎙️", stop_prompt="Processing... ⏳", key='voice_input')
+    audio = mic_recorder(start_prompt="Speak 🎙️", stop_prompt="Processing... ⏳", key='voice_input')
     st.markdown('</div>', unsafe_allow_html=True)
 
     with chat_box:
@@ -119,7 +118,7 @@ with tab_chat:
 
     if audio and audio['id'] != st.session_state.last_audio_id:
         st.session_state.last_audio_id = audio['id']
-        with st.spinner("Decoding voice..."):
+        with st.spinner("Sun raha hoon..."):
             trans = client.audio.transcriptions.create(file=("audio.wav", audio['bytes']), model="whisper-large-v3")
             final_query = trans.text
     elif q:
@@ -128,13 +127,14 @@ with tab_chat:
     if final_query and final_query.strip():
         st.session_state.messages.append({"role": "user", "content": final_query})
         try:
-            sys = {"role": "system", "content": f"Brief response. Creator: {CREATOR}."}
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys] + st.session_state.messages)
+            sys_msg = {"role": "system", "content": f"Brief response. Creator: {CREATOR}."}
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys_msg] + st.session_state.messages)
             ans = res.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": ans})
-            speak_ai(ans) # AI ab bolega
+            asyncio.run(text_to_speech(ans))
             st.rerun()
-        except: st.error("AI Error")
+        except Exception as e:
+            st.error(f"AI Error: {e}")
 
 with tab_settings:
     st.header("⚙️ Settings & Legal")
@@ -142,20 +142,20 @@ with tab_settings:
         st.session_state.messages = []; st.success("Cleared!"); st.rerun()
         
     with st.expander("🛡️ Privacy Policy"):
-        st.write("Aapka data secure hai aur store nahi hota.")
+        st.write("Aapka data encrypted hai. Hum messages store nahi karte.")
     with st.expander("📜 Terms & Conditions"):
-        st.write("Personal use only.")
+        st.write("Ise sirf personal aur valid use ke liye istemal karein.")
     with st.expander("ℹ️ About Siddique AI"):
-        st.write(f"Version 2.0 - Developed by {CREATOR}.")
+        st.write(f"Developed by {CREATOR}. Powered by Groq & Microsoft Edge Voice.")
 
     st.markdown("---")
     if st.button("🚪 Logout Session", use_container_width=True):
-        st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
+        st.session_state.clear(); st.rerun()
 
 with tab_feedback:
     st.header("📩 Feedback")
-    fb = st.text_area("Message Siddique...")
-    if st.button("Submit to Siddique", use_container_width=True):
-        if fb and send_mail(MY_GMAIL, "Feedback", fb):
-            st.success("Sent!")
-    
+    fb = st.text_area("Developer ko message bhejein...")
+    if st.button("Submit Feedback", use_container_width=True):
+        if fb and send_mail(MY_GMAIL, "User Feedback", fb):
+            st.success("Feedback sent!")
+            
