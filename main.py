@@ -43,17 +43,11 @@ st.markdown("""
 # ================= 3. SESSION LOGIC =================
 def init_session():
     defaults = {
-        "logged_in": False, 
-        "otp_sent": False, 
-        "user_email": "", 
-        "messages": [], 
-        "fb_sent": False,
-        "generated_otp": "",
-        "last_audio_id": None
+        "logged_in": False, "otp_sent": False, "user_email": "", 
+        "messages": [], "fb_sent": False, "generated_otp": "", "last_audio_id": None
     }
     for key, value in defaults.items():
-        if key not in st.session_state:
-            st.session_state[key] = value
+        if key not in st.session_state: st.session_state[key] = value
 
 init_session()
 
@@ -65,6 +59,7 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
+# UPDATED VOICE FUNCTION
 def speak_ai(text):
     try:
         url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"
@@ -73,7 +68,10 @@ def speak_ai(text):
         res = requests.post(url, json=data, headers=headers)
         if res.status_code == 200:
             st.audio(res.content, format='audio/mp3', autoplay=True)
-    except: pass
+        else:
+            st.warning(f"Voice Error {res.status_code}: ElevenLabs credits may be empty.")
+    except Exception as e:
+        st.error(f"TTS Error: {e}")
 
 # ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
@@ -92,8 +90,7 @@ if not st.session_state.logged_in:
         otp_in = st.text_input("Enter PIN:", type="password")
         if st.button("Verify & Launch AI", use_container_width=True):
             if otp_in == st.session_state.generated_otp: 
-                st.session_state.logged_in = True
-                st.rerun()
+                st.session_state.logged_in = True; st.rerun()
             else: st.error("Incorrect PIN!")
     st.stop()
 
@@ -104,11 +101,10 @@ with st.sidebar:
     st.markdown("---")
     st.info(f"Developed by {CREATOR}")
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings", "📩 Support"])
 
 with tab_chat:
     chat_box = st.container()
-    
     st.markdown('<div class="mic-section">', unsafe_allow_html=True)
     audio = mic_recorder(start_prompt="Voice Assistant 🎙️", stop_prompt="Processing... ⏳", key='voice_input')
     st.markdown('</div>', unsafe_allow_html=True)
@@ -136,28 +132,21 @@ with tab_chat:
             res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys] + st.session_state.messages)
             ans = res.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": ans})
-            speak_ai(ans)
+            speak_ai(ans) # AI ab bolega
             st.rerun()
-        except Exception as e:
-            st.error(f"Error: {e}")
+        except: st.error("AI Error")
 
 with tab_settings:
     st.header("⚙️ Settings & Legal")
-    
     if st.button("🗑️ Clear Chat History", use_container_width=True):
-        st.session_state.messages = []
-        st.success("Chat history cleared!")
-        st.rerun()
+        st.session_state.messages = []; st.success("Cleared!"); st.rerun()
         
     with st.expander("🛡️ Privacy Policy"):
-        st.write("Aapka data sirf aapke session tak mahdood hai. Hum messages ko store nahi karte.")
-        
+        st.write("Aapka data secure hai aur store nahi hota.")
     with st.expander("📜 Terms & Conditions"):
-        st.write("Ise sirf valid educational aur personal use ke liye design kiya gaya hai.")
-        
+        st.write("Personal use only.")
     with st.expander("ℹ️ About Siddique AI"):
-        st.write(f"Version 2.0 - Developed by **{CREATOR}**.")
-        st.write("Powered by Groq Llama 3.1 & ElevenLabs Voice.")
+        st.write(f"Version 2.0 - Developed by {CREATOR}.")
 
     st.markdown("---")
     if st.button("🚪 Logout Session", use_container_width=True):
@@ -165,8 +154,8 @@ with tab_settings:
 
 with tab_feedback:
     st.header("📩 Feedback")
-    fb = st.text_area("Developer ko message bhejein...", height=150)
+    fb = st.text_area("Message Siddique...")
     if st.button("Submit to Siddique", use_container_width=True):
-        if fb and send_mail(MY_GMAIL, "Feedback from User", fb):
-            st.success("Feedback sent!"); st.session_state.fb_sent = True
+        if fb and send_mail(MY_GMAIL, "Feedback", fb):
+            st.success("Sent!")
     
