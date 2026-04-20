@@ -1,4 +1,4 @@
-import streamlit as st
+Import streamlit as st
 from groq import Groq
 import smtplib
 import random
@@ -6,10 +6,6 @@ import time
 from email.mime.text import MIMEText
 from datetime import datetime
 import pytz 
-import edge_tts
-import asyncio
-import base64
-from streamlit_mic_recorder import mic_recorder
 
 # ================= 1. SETUP =================
 GROQ_KEY = "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"
@@ -25,7 +21,7 @@ def get_ist_time():
     IST = pytz.timezone('Asia/Kolkata')
     return datetime.now(IST).strftime('%Y-%m-%d %I:%M:%S %p')
 
-# ================= 2. PREMIUM UI (Original Style) =================
+# ================= 2. PREMIUM UI =================
 st.markdown("""
     <style>
     :root { color-scheme: dark; }
@@ -36,33 +32,26 @@ st.markdown("""
     .welcome-card { background: rgba(255, 255, 255, 0.05); border: 2px solid #00ff88; border-radius: 25px; padding: 40px; text-align: center; }
     .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
     .ai-msg { background: #1e293b; color: #fff; padding: 12px; border-radius: 15px 15px 15px 0; margin: 10px 0; border-left: 5px solid #00d2ff; max-width: 85%; }
-    .main .block-container { padding-bottom: 180px !important; }
-    .mic-section { background: rgba(0, 255, 136, 0.1); border: 1px dashed #00ff88; padding: 10px; border-radius: 15px; text-align: center; margin-bottom: 10px; }
+    .main .block-container { padding-bottom: 150px !important; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION LOGIC =================
+# ================= 3. SESSION LOGIC (STABLE) =================
 def init_session():
     defaults = {
-        "logged_in": False, "otp_sent": False, "user_email": "", 
-        "messages": [], "fb_sent": False, "generated_otp": "", "last_audio_id": None
+        "logged_in": False, 
+        "otp_sent": False, 
+        "user_email": "", 
+        "messages": [], 
+        "fb_sent": False,
+        "generated_otp": ""
     }
     for key, value in defaults.items():
-        if key not in st.session_state: st.session_state[key] = value
+        if key not in st.session_state:
+            st.session_state[key] = value
 
 init_session()
-
-# ================= 4. FUNCTIONS =================
-async def text_to_speech(text):
-    try:
-        communicate = edge_tts.Communicate(text, "en-US-AvaNeural")
-        await communicate.save("temp_voice.mp3")
-        with open("temp_voice.mp3", "rb") as f:
-            data = f.read()
-            b64 = base64.b64encode(data).decode()
-            md = f'<audio autoplay="true" src="data:audio/mp3;base64,{b64}">'
-            st.markdown(md, unsafe_allow_html=True)
-    except: pass
+# =============================================================
 
 def send_mail(to, sub, body):
     try:
@@ -72,7 +61,7 @@ def send_mail(to, sub, body):
         return True
     except: return False
 
-# ================= 5. LOGIN SCREEN =================
+# ================= 4. LOGIN SCREEN =================
 if not st.session_state.logged_in:
     st.markdown('<div class="welcome-card"><div style="font-size:45px; font-weight:900; color:#00ff88;">SIDDIQUE AI</div><p>Professional Secure Access</p></div>', unsafe_allow_html=True)
     email = st.text_input("Aapka Gmail ID:", value=st.session_state.user_email)
@@ -89,73 +78,48 @@ if not st.session_state.logged_in:
         otp_in = st.text_input("Enter PIN:", type="password")
         if st.button("Verify & Launch AI", use_container_width=True):
             if otp_in == st.session_state.generated_otp: 
-                st.session_state.logged_in = True; st.rerun()
+                st.session_state.logged_in = True
+                st.rerun()
             else: st.error("Incorrect PIN!")
     st.stop()
 
-# ================= 6. MAIN INTERFACE =================
+# ================= 5. MAIN INTERFACE =================
 with st.sidebar:
-    st.markdown(f"### Account: \n`{st.session_state.user_email}`")
-    st.markdown(f"**Current IST:** {get_ist_time()}")
-    st.markdown("---")
-    st.info(f"© Developed by {CREATOR}")
+    st.markdown(f"### Logged in as: \n`{st.session_state.user_email}`")
 
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Settings & Privacy", "📩 Support"])
+tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
 
 with tab_chat:
     chat_box = st.container()
-    st.markdown('<div class="mic-section">', unsafe_allow_html=True)
-    audio = mic_recorder(start_prompt="Speak 🎙️", stop_prompt="Processing... ⏳", key='voice_input')
-    st.markdown('</div>', unsafe_allow_html=True)
-
     with chat_box:
         for m in st.session_state.messages:
             div = "user-msg" if m["role"] == "user" else "ai-msg"
             st.markdown(f'<div class="{div}">{m["content"]}</div>', unsafe_allow_html=True)
 
     q = st.chat_input("Type here...")
-    final_query = None
-
-    if audio and audio['id'] != st.session_state.last_audio_id:
-        st.session_state.last_audio_id = audio['id']
-        with st.spinner("Sun raha hoon..."):
-            trans = client.audio.transcriptions.create(file=("audio.wav", audio['bytes']), model="whisper-large-v3")
-            final_query = trans.text
-    elif q:
-        final_query = q
-
-    if final_query and final_query.strip():
-        st.session_state.messages.append({"role": "user", "content": final_query})
+    if q:
+        st.session_state.messages.append({"role": "user", "content": q})
+        with chat_box: st.markdown(f'<div class="user-msg">{q}</div>', unsafe_allow_html=True)
         try:
-            sys_msg = {"role": "system", "content": f"Brief response. Creator: {CREATOR}."}
-            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[sys_msg] + st.session_state.messages)
+            instruction = {"role": "system", "content": f"You are a helpful AI. ONLY if asked about creator/owner, say {CREATOR} made you."}
+            res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[instruction] + st.session_state.messages)
             ans = res.choices[0].message.content
             st.session_state.messages.append({"role": "assistant", "content": ans})
-            asyncio.run(text_to_speech(ans))
+            with chat_box: st.markdown(f'<div class="ai-msg">{ans}</div>', unsafe_allow_html=True)
             st.rerun()
         except Exception as e:
-            st.error(f"AI Error: {e}")
+            st.error(f"Error: {e}")
 
 with tab_settings:
-    st.header("⚙️ Settings & Legal")
-    if st.button("🗑️ Clear Chat History", use_container_width=True):
-        st.session_state.messages = []; st.success("Cleared!"); st.rerun()
-        
-    with st.expander("🛡️ Privacy Policy"):
-        st.write("Aapka data encrypted hai. Hum messages store nahi karte.")
-    with st.expander("📜 Terms & Conditions"):
-        st.write("Ise sirf personal aur valid use ke liye istemal karein.")
-    with st.expander("ℹ️ About Siddique AI"):
-        st.write(f"Developed by {CREATOR}. Powered by Groq & Microsoft Edge Voice.")
-
-    st.markdown("---")
+    st.header("⚙️ Account Controls")
     if st.button("🚪 Logout Session", use_container_width=True):
-        st.session_state.clear(); st.rerun()
+        st.session_state.logged_in = False; st.session_state.otp_sent = False; st.rerun()
 
 with tab_feedback:
     st.header("📩 Feedback")
-    fb = st.text_area("Developer ko message bhejein...")
-    if st.button("Submit Feedback", use_container_width=True):
-        if fb and send_mail(MY_GMAIL, "User Feedback", fb):
-            st.success("Feedback sent!")
-            
+    fb = st.text_area("Write your message...", height=150)
+    if st.button("Submit to Siddique", use_container_width=True):
+        if fb and send_mail(MY_GMAIL, "Feedback", fb):
+            st.success("Feedback sent!"); st.session_state.fb_sent = True
+           
+Ye lo ab paste kardo acche se
