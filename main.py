@@ -122,4 +122,3 @@ with tab_feedback:
         if fb and send_mail(MY_GMAIL, "Feedback", fb):
             st.success("Feedback sent!"); st.session_state.fb_sent = True
            
-Ye lo ab paste kardo acche se
