@@ -14,59 +14,57 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Siddique AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI =================
+# ================= 2. HIGH CONTRAST EYE-SAVER UI =================
 st.markdown("""
     <style>
-    /* Live Animated Background */
-    @keyframes bgMove {
-        0% {background-position: 0% 50%;}
-        50% {background-position: 100% 50%;}
-        100% {background-position: 0% 50%;}
+    /* Dark, Eye-friendly background with subtle green breath */
+    @keyframes slowBreath {
+        0% {background-color: #050505;}
+        50% {background-color: #0a0e0a;}
+        100% {background-color: #050505;}
     }
     .stApp {
-        background: linear-gradient(-45deg, #0f172a, #4338ca, #be185d, #0f172a);
-        background-size: 400% 400%;
-        animation: bgMove 10s ease infinite;
+        animation: slowBreath 10s infinite;
+        color: #e0e0e0;
     }
 
-    /* Glassmorphism Cards */
-    .stApp > div { background: transparent !important; }
-    
-    .chat-card { 
-        background: rgba(0, 0, 0, 0.4) !important;
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+    /* Neon Green Accents */
+    :root { --neon-green: #39ff14; }
+
+    /* Glass Cards */
+    .card {
+        background: rgba(10, 10, 10, 0.7);
+        border: 1px solid #1a1a1a;
         padding: 20px;
-        border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
     }
 
-    /* Neon Text & Elements */
-    h1, h2 { color: #fff !important; text-shadow: 0 0 10px #6366f1; }
-    
+    /* Messages */
     .user-msg { 
-        background: linear-gradient(90deg, #6366f1, #a855f7); 
-        color: white; padding: 12px 20px; border-radius: 20px 20px 0 20px; 
-        margin: 10px 0; text-align: right; box-shadow: 0 0 15px #6366f1;
+        background: #1a1a1a; border-left: 4px solid var(--neon-green); 
+        padding: 12px; border-radius: 5px; margin-bottom: 10px; color: #fff;
     }
     .ai-msg { 
-        background: rgba(255, 255, 255, 0.1); color: #e2e8f0; 
-        padding: 12px 20px; border-radius: 20px 20px 20px 0; margin: 10px 0;
-        border-left: 4px solid #38bdf8;
+        background: transparent; border-left: 4px solid #333; 
+        padding: 12px; margin-bottom: 10px; color: #cfcfcf;
     }
 
-    /* Glowy Buttons */
+    /* High Contrast Buttons */
     .stButton>button { 
-        background: transparent !important; 
-        border: 2px solid #6366f1 !important; 
-        color: #fff !important; 
-        border-radius: 50px !important;
-        transition: 0.4s !important;
+        background-color: transparent !important; 
+        border: 1px solid var(--neon-green) !important; 
+        color: var(--neon-green) !important; 
+        border-radius: 4px !important;
+        font-weight: bold;
     }
     .stButton>button:hover { 
-        background: #6366f1 !important; 
-        box-shadow: 0 0 20px #6366f1 !important; 
+        background-color: var(--neon-green) !important; 
+        color: #000 !important; 
     }
+
+    /* Sidebar */
+    [data-testid="stSidebar"] { background-color: #050505 !important; border-right: 1px solid #1a1a1a; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -85,33 +83,33 @@ def send_mail(to, sub, body):
 
 # ================= 4. LOGIN =================
 if not st.session_state.logged_in:
-    st.markdown("<div class='chat-card' style='text-align:center'><h1>SIDDIQUE AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
-    email = st.text_input("Enter Email ID")
+    st.markdown("<div class='card' style='text-align:center'><h1>SIDDIQUE AI</h1><p style='color:#888'>Secure Terminal</p></div>", unsafe_allow_html=True)
+    email = st.text_input("Email ID:")
     if not st.session_state.otp_sent:
-        if st.button("Initialize Access"):
+        if st.button("Authenticate"):
             otp = str(random.randint(1000, 9999))
             if send_mail(email, "Access PIN", f"PIN: {otp}"):
                 st.session_state.generated_otp = otp; st.session_state.otp_sent = True; st.rerun()
     else:
-        otp_in = st.text_input("Enter Secret PIN", type="password")
-        if st.button("Unlock System"):
+        otp_in = st.text_input("Enter PIN:", type="password")
+        if st.button("Unlock"):
             if otp_in == st.session_state.generated_otp: st.session_state.logged_in = True; st.rerun()
     st.stop()
 
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
-    st.header("🛸 System Panel")
-    nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Core Settings", "📩 Terminal Feedback"])
+    st.markdown("### 🛰️ System")
+    nav = st.radio("Navigation", ["💬 Chat", "⚙️ Settings", "📩 Feedback"], label_visibility="collapsed")
     st.markdown("---")
-    if st.button("System Logout"): st.session_state.logged_in = False; st.rerun()
+    if st.button("Logout"): st.session_state.logged_in = False; st.rerun()
 
-if nav == "💬 Nexus Chat":
-    st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
+if nav == "💬 Chat":
+    st.markdown("<div class='card'>", unsafe_allow_html=True)
     for m in st.session_state.messages:
         c = "user-msg" if m["role"] == "user" else "ai-msg"
-        st.markdown(f'<div class="{c}">{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="{c}"><b>{m["role"].title()}</b>: {m["content"]}</div>', unsafe_allow_html=True)
     
-    q = st.chat_input("Connect with AI...")
+    q = st.chat_input("System prompt...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}"}] + st.session_state.messages)
@@ -119,13 +117,13 @@ if nav == "💬 Nexus Chat":
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-elif nav == "⚙️ Core Settings":
+elif nav == "⚙️ Settings":
     st.subheader("Preferences")
-    if st.button("Purge Memory"): st.session_state.messages = []; st.rerun()
+    if st.button("Wipe Chat Data"): st.session_state.messages = []; st.rerun()
 
-elif nav == "📩 Terminal Feedback":
-    st.subheader("Direct Link")
-    fb = st.text_area("Log your message")
+elif nav == "📩 Feedback":
+    st.subheader("Direct Transmission")
+    fb = st.text_area("Log details")
     if st.button("Transmit"):
         send_mail(MY_GMAIL, "Feedback", fb)
         st.success("Transmitted!")
