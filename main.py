@@ -14,44 +14,59 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Siddique AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CSS =================
+# ================= 2. LIVE PREMIUM CYBER UI =================
 st.markdown("""
     <style>
-    /* Live Background Animation */
-    @keyframes gradientBG {
+    /* Live Animated Background */
+    @keyframes bgMove {
         0% {background-position: 0% 50%;}
         50% {background-position: 100% 50%;}
         100% {background-position: 0% 50%;}
     }
     .stApp {
-        background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
+        background: linear-gradient(-45deg, #0f172a, #4338ca, #be185d, #0f172a);
         background-size: 400% 400%;
-        animation: gradientBG 15s ease infinite;
+        animation: bgMove 10s ease infinite;
     }
 
-    /* Professional UI Components */
-    .stChatInputContainer { border: 1px solid rgba(255,255,255,0.1) !important; border-radius: 12px !important; }
+    /* Glassmorphism Cards */
+    .stApp > div { background: transparent !important; }
+    
+    .chat-card { 
+        background: rgba(0, 0, 0, 0.4) !important;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+
+    /* Neon Text & Elements */
+    h1, h2 { color: #fff !important; text-shadow: 0 0 10px #6366f1; }
     
     .user-msg { 
-        background: rgba(255, 255, 255, 0.1); border-left: 3px solid #6366f1; 
-        padding: 15px; border-radius: 0 12px 12px 12px; margin-bottom: 10px;
+        background: linear-gradient(90deg, #6366f1, #a855f7); 
+        color: white; padding: 12px 20px; border-radius: 20px 20px 0 20px; 
+        margin: 10px 0; text-align: right; box-shadow: 0 0 15px #6366f1;
     }
     .ai-msg { 
-        background: rgba(0, 0, 0, 0.2); border-left: 3px solid #22d3ee; 
-        padding: 15px; border-radius: 12px 0 12px 12px; margin-bottom: 10px;
+        background: rgba(255, 255, 255, 0.1); color: #e2e8f0; 
+        padding: 12px 20px; border-radius: 20px 20px 20px 0; margin: 10px 0;
+        border-left: 4px solid #38bdf8;
     }
-    
-    /* Buttons */
+
+    /* Glowy Buttons */
     .stButton>button { 
-        background: rgba(255, 255, 255, 0.05) !important; 
-        border: 1px solid rgba(255,255,255,0.2) !important; 
-        color: white !important; 
-        transition: 0.3s;
+        background: transparent !important; 
+        border: 2px solid #6366f1 !important; 
+        color: #fff !important; 
+        border-radius: 50px !important;
+        transition: 0.4s !important;
     }
-    .stButton>button:hover { background: rgba(99, 102, 241, 0.3) !important; border-color: #6366f1 !important; }
-    
-    /* Sidebar */
-    [data-testid="stSidebar"] { background: rgba(0,0,0,0.3) !important; backdrop-filter: blur(10px); }
+    .stButton>button:hover { 
+        background: #6366f1 !important; 
+        box-shadow: 0 0 20px #6366f1 !important; 
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -70,46 +85,48 @@ def send_mail(to, sub, body):
 
 # ================= 4. LOGIN =================
 if not st.session_state.logged_in:
-    st.markdown("<h1 style='text-align: center; color: white;'>Siddique AI</h1>", unsafe_allow_html=True)
-    email = st.text_input("Email:")
+    st.markdown("<div class='chat-card' style='text-align:center'><h1>SIDDIQUE AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
+    email = st.text_input("Enter Email ID")
     if not st.session_state.otp_sent:
-        if st.button("Authenticate"):
+        if st.button("Initialize Access"):
             otp = str(random.randint(1000, 9999))
             if send_mail(email, "Access PIN", f"PIN: {otp}"):
                 st.session_state.generated_otp = otp; st.session_state.otp_sent = True; st.rerun()
     else:
-        otp_in = st.text_input("Enter PIN:", type="password")
-        if st.button("Verify"):
+        otp_in = st.text_input("Enter Secret PIN", type="password")
+        if st.button("Unlock System"):
             if otp_in == st.session_state.generated_otp: st.session_state.logged_in = True; st.rerun()
     st.stop()
 
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
-    st.title("Control Panel")
-    nav = st.radio("Navigation", ["💬 Chat Session", "⚙️ Settings", "📩 Support"])
+    st.header("🛸 System Panel")
+    nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Core Settings", "📩 Terminal Feedback"])
     st.markdown("---")
-    if st.button("Logout"): st.session_state.logged_in = False; st.rerun()
+    if st.button("System Logout"): st.session_state.logged_in = False; st.rerun()
 
-if nav == "💬 Chat Session":
+if nav == "💬 Nexus Chat":
+    st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
     for m in st.session_state.messages:
         c = "user-msg" if m["role"] == "user" else "ai-msg"
-        st.markdown(f'<div class="{c}"><b>{m["role"].title()}</b><br>{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="{c}">{m["content"]}</div>', unsafe_allow_html=True)
     
-    q = st.chat_input("Message Siddique AI...")
+    q = st.chat_input("Connect with AI...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}"}] + st.session_state.messages)
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
         st.rerun()
+    st.markdown("</div>", unsafe_allow_html=True)
 
-elif nav == "⚙️ Settings":
-    st.header("App Preferences")
-    if st.button("Reset Chat Data"): st.session_state.messages = []; st.rerun()
+elif nav == "⚙️ Core Settings":
+    st.subheader("Preferences")
+    if st.button("Purge Memory"): st.session_state.messages = []; st.rerun()
 
-elif nav == "📩 Support":
-    st.header("Get in Touch")
-    fb = st.text_area("Write feedback")
-    if st.button("Submit"):
+elif nav == "📩 Terminal Feedback":
+    st.subheader("Direct Link")
+    fb = st.text_area("Log your message")
+    if st.button("Transmit"):
         send_mail(MY_GMAIL, "Feedback", fb)
-        st.success("Message sent!")
+        st.success("Transmitted!")
         
