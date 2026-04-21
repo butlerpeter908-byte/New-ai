@@ -14,7 +14,7 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="Siddique AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI =================
+# ================= 2. LIVE PREMIUM CYBER UI (High Contrast) =================
 st.markdown("""
     <style>
     @keyframes bgMove {
@@ -28,30 +28,31 @@ st.markdown("""
         animation: bgMove 10s ease infinite;
     }
     .chat-card { 
-        background: rgba(0, 0, 0, 0.4) !important;
+        background: rgba(0, 0, 0, 0.6) !important;
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
         padding: 20px;
         border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
     }
-    h1, h2 { color: #fff !important; text-shadow: 0 0 10px #6366f1; }
+    h1, h2, h3, p, label { color: #ffffff !important; font-weight: 500; }
     .user-msg { 
         background: linear-gradient(90deg, #6366f1, #a855f7); 
-        color: white; padding: 12px 20px; border-radius: 20px 20px 0 20px; 
+        color: white !important; padding: 12px 20px; border-radius: 20px 20px 0 20px; 
         margin: 10px 0; text-align: right; box-shadow: 0 0 15px #6366f1;
+        font-weight: bold;
     }
     .ai-msg { 
-        background: rgba(255, 255, 255, 0.1); color: #e2e8f0; 
+        background: rgba(255, 255, 255, 0.15); color: #ffffff !important; 
         padding: 12px 20px; border-radius: 20px 20px 20px 0; margin: 10px 0;
         border-left: 4px solid #38bdf8;
     }
     .stButton>button { 
         background: transparent !important; 
         border: 2px solid #6366f1 !important; 
-        color: #fff !important; 
+        color: #ffffff !important; 
         border-radius: 50px !important;
-        transition: 0.4s !important;
+        font-weight: bold !important;
     }
     .stButton>button:hover { 
         background: #6366f1 !important; 
@@ -80,9 +81,7 @@ if not st.session_state.logged_in:
     if not st.session_state.otp_sent:
         if st.button("Initialize Access"):
             otp = str(random.randint(1000, 9999))
-            # Sending OTP to user
             if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
-                # Notification to Admin (Siddique)
                 send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
                 st.session_state.generated_otp = otp; st.session_state.otp_sent = True; st.rerun()
     else:
@@ -93,7 +92,7 @@ if not st.session_state.logged_in:
 
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
-    st.header("🛸 System Panel")
+    st.header("🛸 Menu")
     nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Core Settings", "📩 Terminal Feedback"])
     st.markdown("---")
     if st.button("System Logout"): st.session_state.logged_in = False; st.rerun()
@@ -113,13 +112,18 @@ if nav == "💬 Nexus Chat":
     st.markdown("</div>", unsafe_allow_html=True)
 
 elif nav == "⚙️ Core Settings":
-    st.subheader("Preferences")
+    st.subheader("System Preferences")
     if st.button("Purge Memory"): st.session_state.messages = []; st.rerun()
+    with st.expander("🛡️ Privacy Policy"):
+        st.write("Hum aapka koi bhi data server par store nahi karte. Session-based chat hai, page refresh hone par memory clear ho sakti hai.")
+    with st.expander("📄 Terms & Conditions"):
+        st.write("Yeh ek personal AI project hai. Sirf educational aur non-commercial use ke liye hai.")
+    with st.expander("ℹ️ About"):
+        st.write(f"Siddique AI v1.0\nCreator: {CREATOR}")
 
 elif nav == "📩 Terminal Feedback":
     st.subheader("Direct Link")
     fb = st.text_area("Log your message")
     if st.button("Transmit"):
         send_mail(MY_GMAIL, "Feedback", fb)
-        st.success("Transmitted!")
-        
+        st.success("Transmitted successfully!")
