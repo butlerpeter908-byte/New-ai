@@ -2,7 +2,6 @@ import streamlit as st
 from groq import Groq
 import smtplib
 import random
-import time
 from email.mime.text import MIMEText
 from datetime import datetime
 import pytz
@@ -15,28 +14,45 @@ CREATOR = "Siddique Mohd Saif"
 
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="Siddique AI 🤖", layout="wide")
+st.set_page_config(page_title="Siddique AI 🤖", layout="wide", page_icon="🤖")
 
-def get_ist_time():
-    IST = pytz.timezone('Asia/Kolkata')
-    return datetime.now(IST).strftime('%Y-%m-%d %I:%M:%S %p')
-
-# ================= 2. UI STYLING =================
+# ================= 2. UI STYLING (Modern Glassmorphism) =================
 st.markdown("""
     <style>
-    :root { color-scheme: dark; }
-    #MainMenu {visibility: hidden;} header {visibility: hidden;} footer {visibility: hidden;}
-    .stApp { background: linear-gradient(-45deg, #0f172a, #051937, #004d40, #0d1117); background-size: 400% 400%; animation: gradient 15s ease infinite; color: #e0e0e0 !important; }
-    div[data-testid="stChatInput"] { position: fixed !important; bottom: 30px !important; left: 5% !important; right: 5% !important; width: 90% !important; z-index: 9999 !important; background: rgba(15, 23, 42, 0.9) !important; backdrop-filter: blur(12px); border: 1px solid #00ff88; border-radius: 15px; }
-    .user-msg { background: #00ff88; color: #000; padding: 12px; border-radius: 15px 15px 0 15px; margin: 10px 0; text-align: right; margin-left: auto; max-width: 80%; }
-    .ai-msg { background: #1e293b; color: #fff; padding: 12px; border-radius: 15px 15px 15px 0; margin: 10px 0; border-left: 5px solid #00d2ff; max-width: 85%; }
+    /* Global Styles */
+    .stApp { background: radial-gradient(circle at center, #0f172a, #020617); color: #e0e0e0; }
+    
+    /* Sidebar Styling */
+    [data-testid="stSidebar"] { background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(15px); border-right: 1px solid #1e293b; }
+    
+    /* Chat Input Styling */
+    div[data-testid="stChatInput"] { 
+        position: fixed; bottom: 20px; left: 20%; right: 20%; 
+        background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); 
+        border-radius: 20px; border: 1px solid #334155; 
+    }
+
+    /* Message Bubbles */
+    .user-msg { 
+        background: linear-gradient(135deg, #00ff88, #00d2ff); 
+        color: #000; padding: 12px 18px; border-radius: 18px 18px 0 18px; 
+        margin: 10px 0; text-align: right; margin-left: auto; max-width: 70%; font-weight: 500;
+    }
+    .ai-msg { 
+        background: rgba(255, 255, 255, 0.08); 
+        color: #fff; padding: 12px 18px; border-radius: 18px 18px 18px 0; 
+        margin: 10px 0; border-left: 4px solid #00d2ff; max-width: 80%; backdrop-filter: blur(5px);
+    }
+    
+    /* Buttons */
+    .stButton>button { border-radius: 20px; border: 1px solid #00d2ff; background: transparent; color: #00d2ff; transition: 0.3s; }
+    .stButton>button:hover { background: #00d2ff; color: #000; }
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION =================
+# ================= 3. SESSION & FUNCTIONS =================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
-if "feedback_sent" not in st.session_state: st.session_state.feedback_sent = False
 if "messages" not in st.session_state: st.session_state.messages = []
 
 def send_mail(to, sub, body):
@@ -49,46 +65,60 @@ def send_mail(to, sub, body):
 
 # ================= 4. LOGIN =================
 if not st.session_state.logged_in:
-    st.title("SIDDIQUE AI - Secure Access")
-    email = st.text_input("Email ID:")
-    if not st.session_state.otp_sent:
-        if st.button("Get PIN"):
-            otp = str(random.randint(1000, 9999))
-            if send_mail(email, "Access PIN", f"PIN: {otp}"):
-                st.session_state.generated_otp = otp; st.session_state.user_email = email
-                st.session_state.otp_sent = True; st.rerun()
-    else:
-        otp_in = st.text_input("Enter PIN:", type="password")
-        if st.button("Verify"):
-            if otp_in == st.session_state.generated_otp: 
-                st.session_state.logged_in = True; st.rerun()
+    st.markdown("<h1 style='text-align: center; color: #00d2ff;'>SIDDIQUE AI 🤖</h1>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align: center;'>Secure Access Required</p>", unsafe_allow_html=True)
+    
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        email = st.text_input("Enter Email ID:")
+        if not st.session_state.otp_sent:
+            if st.button("Get Access PIN"):
+                otp = str(random.randint(1000, 9999))
+                if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
+                    st.session_state.generated_otp = otp
+                    st.session_state.otp_sent = True; st.rerun()
+        else:
+            otp_in = st.text_input("Enter PIN:", type="password")
+            if st.button("Verify Access"):
+                if otp_in == st.session_state.generated_otp: 
+                    st.session_state.logged_in = True; st.rerun()
+                else: st.error("Invalid PIN")
     st.stop()
 
 # ================= 5. MAIN INTERFACE =================
-tab_chat, tab_settings, tab_feedback = st.tabs(["💬 Messenger", "⚙️ Account & Privacy", "📩 Support"])
+# Sidebar Navigation
+with st.sidebar:
+    st.image("https://cdn-icons-png.flaticon.com/512/4712/4712038.png", width=100)
+    st.title("Siddique AI")
+    menu = st.radio("Navigation", ["💬 Messenger", "⚙️ Account", "📩 Support"])
+    st.divider()
+    if st.button("Logout"): 
+        st.session_state.logged_in = False; st.rerun()
 
-with tab_chat:
+if menu == "💬 Messenger":
+    st.header("Chat with AI")
+    # Display messages
     for m in st.session_state.messages:
         st.markdown(f'<div class="{"user-msg" if m["role"]=="user" else "ai-msg"}">{m["content"]}</div>', unsafe_allow_html=True)
-    q = st.chat_input("Type here...")
+    
+    q = st.chat_input("Ask me anything...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
         res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}"}] + st.session_state.messages)
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
         st.rerun()
 
-with tab_settings:
-    st.header("Account & Privacy")
-    if st.button("Clear History"): st.session_state.messages = []; st.rerun()
+elif menu == "⚙️ Account":
+    st.header("⚙️ Account & Privacy")
+    if st.button("Clear Chat History"): 
+        st.session_state.messages = []; st.success("History Cleared!"); st.rerun()
+    st.write(f"**Developer:** {CREATOR}")
     with st.expander("🛡️ Privacy Policy"): st.write("Session-based chat, no data retention.")
-    with st.expander("📄 Terms and Conditions"): st.write("Educational use only.")
-    with st.expander("ℹ️ About"): st.write(f"Developed by {CREATOR}")
 
-with tab_feedback:
-    if st.session_state.feedback_sent:
-        st.success("✅ Thanks for your feedback, Sir!")
-    else:
-        fb = st.text_area("Your feedback...")
-        if st.button("Submit"):
-            send_mail(MY_GMAIL, "Feedback", fb)
-            st.session_state.feedback_sent = True; st.rerun()
+elif menu == "📩 Support":
+    st.header("📩 Feedback & Support")
+    fb = st.text_area("Your thoughts...", height=150)
+    if st.button("Submit Feedback"):
+        send_mail(MY_GMAIL, "Feedback", fb)
+        st.success("✅ Thank you for your feedback!")
+        
