@@ -8,7 +8,7 @@ from datetime import datetime
 import pytz
 
 # ================= 1. SETUP =================
-GROQ_KEY = "Gsk_7stbSOTxKuEPXoQA8cwmWGdyb3FYkKFM669WLlWC3YNHi3RxyuVa"
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
 CREATOR = "Siddique Mohd Saif"
