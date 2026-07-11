@@ -1,7 +1,7 @@
 import streamlit as st
 from groq import Groq
 import smtplib
-import random
+import random 
 from email.mime.text import MIMEText
 
 # ================= 1. SETUP =================
