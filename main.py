@@ -113,13 +113,44 @@ if nav == "💬 Nexus Chat":
 
 elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
-    if st.button("Purge Memory"): st.session_state.messages = []; st.rerun()
+    
+    # 1. CLEAR HISTORY OPTION
+    if st.button("🗑️ Clear History", use_container_width=True):
+        st.session_state.messages = []
+        st.success("Chat history cleared successfully, Sir!")
+        time.sleep(1)
+        st.rerun()
+        
+    st.write("---")
+    
+    # 2. PRIVACY POLICY
     with st.expander("🛡️ Privacy Policy"):
-    with  st.write("Hum aapka koi bhi data server par store nahi karte. Session-based chat hai, page refresh hone par memory clear ho sakti hai.")
+        st.markdown("""
+        ### **Privacy Policy**
+        * **Data Protection:** Hum aapka koi bhi data ya chats server par store nahi karte.
+        * **Session-Based:** Yeh interface poori tarah se session-based hai. Jaise hi aap page refresh karenge ya tab close karenge, aapki saari memory clear ho jayegi.
+        * **No Logs:** Groq API connectivity bilkul secure hai aur end-to-end encrypted session use karti hai.
+        """)
+        
+    # 3. TERMS & CONDITIONS
     with st.expander("📄 Terms & Conditions"):
-         st.write("Yeh ek personal AI project hai. Sirf educational aur non-commercial use ke liye hai.")
+        st.markdown("""
+        ### **Terms & Conditions**
+        * **Usage:** Yeh ek personal AI assistant project hai, jo sirf educational aur non-commercial use ke liye design kiya gaya hai.
+        * **API Compliance:** Is application ka misuse, heavy automated requests, ya script-based targeting strictly prohibited hai.
+        * **Responsibility:** AI ke generated response temporary hote hain; unhe backup karne ki zimmedari user ki hogi.
+        """)
+        
+    # 4. ABOUT
     with st.expander("ℹ️ About"):
-        st.write(f"NEXUS AI v1.0\nCreator: {CREATOR}")
+        st.markdown(f"""
+        ### **NEXUS AI v1.0**
+        * **Status:** Fully Optimized & Secure Deployment.
+        * **Architecture:** Streamlit Core UI equipped with Groq LLM Acceleration.
+        * **Developer & Creator:** {CREATOR}
+        * *Systems are running under secure environment regulations.*
+        """)
+
 
 elif nav == "📩 Terminal Feedback":
     st.subheader("Direct Link")
