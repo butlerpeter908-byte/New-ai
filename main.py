@@ -5,14 +5,14 @@ import random
 from email.mime.text import MIMEText
 
 # ================= 1. SETUP =================
-GROQ_KEY = "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"
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "rkpi toiq sdgj vfvn" 
-CREATOR = "Siddique Mohd Saif"
+CREATOR = "mr owner"
 
 client = Groq(api_key=GROQ_KEY)
 
-st.set_page_config(page_title="Siddique AI", layout="centered")
+st.set_page_config(page_title="MR NEXUS AI", layout="centered")
 
 # ================= 2. LIVE PREMIUM CYBER UI (High Contrast) =================
 st.markdown("""
@@ -111,7 +111,7 @@ if nav == "💬 Nexus Chat":
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
-elif nav == "⚙️ Core Settings":
+elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
     if st.button("Purge Memory"): st.session_state.messages = []; st.rerun()
     with st.expander("🛡️ Privacy Policy"):
