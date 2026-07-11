@@ -93,7 +93,7 @@ if not st.session_state.logged_in:
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
     st.header("🛸 Menu")
-    nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Core Settings", "📩 Terminal Feedback"])
+    nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings", "📩 Terminal Feedback"])
     st.markdown("---")
     if st.button("System Logout"): st.session_state.logged_in = False; st.rerun()
 
