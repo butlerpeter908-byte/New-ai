@@ -115,15 +115,15 @@ elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
     if st.button("Purge Memory"): st.session_state.messages = []; st.rerun()
     with st.expander("🛡️ Privacy Policy"):
-        st.write("Hum aapka koi bhi data server par store nahi karte. Session-based chat hai, page refresh hone par memory clear ho sakti hai.")
+    with  st.write("Hum aapka koi bhi data server par store nahi karte. Session-based chat hai, page refresh hone par memory clear ho sakti hai.")
     with st.expander("📄 Terms & Conditions"):
-        st.write("Yeh ek personal AI project hai. Sirf educational aur non-commercial use ke liye hai.")
+         st.write("Yeh ek personal AI project hai. Sirf educational aur non-commercial use ke liye hai.")
     with st.expander("ℹ️ About"):
-        st.write(f"Siddique AI v1.0\nCreator: {CREATOR}")
+        st.write(f"NEXUS AI v1.0\nCreator: {CREATOR}")
 
 elif nav == "📩 Terminal Feedback":
     st.subheader("Direct Link")
     fb = st.text_area("Log your message")
     if st.button("Transmit"):
         send_mail(MY_GMAIL, "Feedback", fb)
-        st.success("Transmitted successfully!")
+        st.success("THANK YOU FOR FEEDBACK!🫶🏻🎊")
