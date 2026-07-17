@@ -76,7 +76,7 @@ def send_mail(to, sub, body):
 
     # ================= 4. LOGIN (OTP SECURED) =================
     if not st.session_state.logged_in:
-    st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
+           st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
     # Agar OTP nahi bheja gaya hai, toh Email aur Initialize button dikhao
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
