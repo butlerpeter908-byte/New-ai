@@ -82,7 +82,7 @@ def send_mail(to, sub, body):
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
-            if email: # Email khali na ho
+            if email:  # Email khali na ho
                 otp = str(random.randint(1000, 9999))
                 if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
                     send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
