@@ -75,20 +75,19 @@ def send_mail(to, sub, body):
     except: return False
 
     # ================= 4. LOGIN (OTP SECURED) =================
+    if not st.session_state.logged_in:
+    st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
+    email = st.text_input("Enter Email ID")
     if not st.session_state.otp_sent:
         if st.button("Initialize Access"):
             otp = str(random.randint(1000, 9999))
             if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
                 send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
-                st.session_state.generated_otp = otp
-                st.session_state.otp_sent = True
-                st.rerun()
+                st.session_state.generated_otp = otp; st.session_state.otp_sent = True; st.rerun()
     else:
         otp_in = st.text_input("Enter Secret PIN", type="password")
         if st.button("Unlock System"):
-            if otp_in == st.session_state.generated_otp:
-                st.session_state.logged_in = True
-                st.rerun()
+            if otp_in == st.session_state.generated_otp: st.session_state.logged_in = True; st.rerun()
     st.stop()
 
 # ================= 5. MAIN INTERFACE =================
