@@ -62,10 +62,30 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION =================
+# ================= 3. SESSION & HELPER FUNCTIONS =================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "messages" not in st.session_state: st.session_state.messages = []
+
+# Blocked Temporary Email Domains List
+DISPOSABLE_DOMAINS = [
+    "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com", 
+    "sharklasers.com", "yopmail.com", "trashmail.com", "dispostable.com", 
+    "getnada.com", "tempail.com", "inboxkitten.com", "fakeinbox.com",
+    "maildrop.cc", "crazymailing.com", "tmail.ws", "temp-mail.org"
+]
+
+def is_valid_real_email(email):
+    """Check if email is formatted correctly and NOT a temporary email."""
+    if "@" not in email or "." not in email:
+        return False, "Invalid Email format!"
+    
+    domain = email.strip().lower().split("@")[-1]
+    
+    if domain in DISPOSABLE_DOMAINS or "temp" in domain or "disposable" in domain or "fake" in domain:
+        return False, "🚫 Temporary / Disposable Emails are NOT allowed!"
+        
+    return True, "OK"
 
 def send_mail(to, sub, body):
     try:
@@ -84,19 +104,23 @@ if not st.session_state.logged_in:
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
-            if email:  # Email khali na ho
-                otp = str(random.randint(1000, 9999))
-                if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
-                    send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
-                    st.session_state.generated_otp = otp
-                    st.session_state.otp_sent = True
-                    st.rerun()
+            if email:
+                is_valid, msg = is_valid_real_email(email)
+                if is_valid:
+                    otp = str(random.randint(1000, 9999))
+                    if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
+                        send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
+                        st.session_state.generated_otp = otp
+                        st.session_state.otp_sent = True
+                        st.rerun()
+                    else:
+                        st.error("Failed to send email. Check your connection or email ID.")
                 else:
-                    st.error("Failed to send email. Check your connection or email ID.")
+                    st.error(f"❌ {msg}")
             else:
                 st.error("Please enter a valid Email ID first!")
                 
-    # Agar OTP ja chuka hai, toh email chhup jayega aur PIN validation khulega
+    # Agar OTP ja chuka hai, toh PIN validation khulega
     else:
         st.info("OTP sent successfully! Please check your email.")
         otp_in = st.text_input("Enter Secret PIN", type="password")
@@ -121,6 +145,15 @@ with st.sidebar:
         st.rerun()
 
 if nav == "💬 Nexus Chat":
+    # Welcome Card Box (Khali nahi dikhega ab)
+    st.markdown("""
+        <div class='chat-card' style='text-align: center; margin-bottom: 15px;'>
+            <h2 style='margin: 0; padding: 0;'>🚀 WELCOME TO NEXUS AI</h2>
+            <p style='margin-top: 5px; opacity: 0.8;'>Your Personal AI Companion is Ready</p>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    # Chat Area
     st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
     for m in st.session_state.messages:
         c = "user-msg" if m["role"] == "user" else "ai-msg"
@@ -183,4 +216,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-    
+                
