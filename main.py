@@ -2,6 +2,7 @@ import streamlit as st
 from groq import Groq
 import smtplib 
 import random 
+import time
 from email.mime.text import MIMEText
 
 # ================= 1. SETUP =================
@@ -72,11 +73,13 @@ def send_mail(to, sub, body):
         with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
             s.login(MY_GMAIL, APP_PASS); s.send_message(msg)
         return True
-    except: return False
+    except: 
+        return False
 
-    # ================= 4. LOGIN (OTP SECURED) =================
-    if not st.session_state.logged_in:
-           st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
+# ================= 4. LOGIN (OTP SECURED) =================
+if not st.session_state.logged_in:
+    st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
+    
     # Agar OTP nahi bheja gaya hai, toh Email aur Initialize button dikhao
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
@@ -88,6 +91,8 @@ def send_mail(to, sub, body):
                     st.session_state.generated_otp = otp
                     st.session_state.otp_sent = True
                     st.rerun()
+                else:
+                    st.error("Failed to send email. Check your connection or email ID.")
             else:
                 st.error("Please enter a valid Email ID first!")
                 
@@ -110,7 +115,10 @@ with st.sidebar:
     st.header("🛸 Menu")
     nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings", "📩 Terminal Feedback"])
     st.markdown("---")
-    if st.button("System Logout"): st.session_state.logged_in = False; st.rerun()
+    if st.button("System Logout"): 
+        st.session_state.logged_in = False
+        st.session_state.otp_sent = False
+        st.rerun()
 
 if nav == "💬 Nexus Chat":
     st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
@@ -166,11 +174,13 @@ elif nav == "⚙️ Settings":
         * *Systems are running under secure environment regulations.*
         """)
 
-
 elif nav == "📩 Terminal Feedback":
     st.subheader("Direct Link")
     fb = st.text_area("Log your message")
     if st.button("Transmit"):
-        send_mail(MY_GMAIL, "Feedback", fb)
-        st.success("THANK YOU FOR FEEDBACK!🫶🏻🎊")
-    
+        if fb:
+            send_mail(MY_GMAIL, "Feedback", fb)
+            st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
+        else:
+            st.error("Please write some feedback before transmitting.")
+        
