@@ -124,22 +124,61 @@ def send_mail(to, sub, body):
     except: 
         return False
 
-# Function to track user IP, location & send email alert in IST
-def send_login_tracking_alert(user_email="Google OAuth User"):
-    try:
-        # Get location and IP info
-        response = requests.get('https://ipapi.co/json/').json()
-        ip = response.get('ip', 'Unknown')
-        city = response.get('city', 'Unknown')
-        region = response.get('region', 'Unknown')
-        country = response.get('country_name', 'Unknown')
-        org = response.get('org', 'Unknown Provider')
-        
-        # Get Indian Standard Time (IST)
-        ist = pytz.timezone('Asia/Kolkata')
-        time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
+# Multi-API Backup System for Exact IP and Location Tracking
+def get_client_ip_details():
+    apis = [
+        'http://ip-api.com/json/',
+        'https://ipwho.is/',
+        'https://freeipapi.com/api/json'
+    ]
+    
+    for api in apis:
+        try:
+            res = requests.get(api, timeout=4).json()
+            if api == 'http://ip-api.com/json/' and res.get('status') == 'success':
+                return {
+                    'ip': res.get('query'),
+                    'city': res.get('city'),
+                    'region': res.get('regionName'),
+                    'country': res.get('country'),
+                    'org': res.get('isp')
+                }
+            elif api == 'https://ipwho.is/' and res.get('success'):
+                return {
+                    'ip': res.get('ip'),
+                    'city': res.get('city'),
+                    'region': res.get('region'),
+                    'country': res.get('country'),
+                    'org': res.get('connection', {}).get('isp')
+                }
+            elif api == 'https://freeipapi.com/api/json':
+                return {
+                    'ip': res.get('ipAddress'),
+                    'city': res.get('cityName'),
+                    'region': res.get('regionName'),
+                    'country': res.get('countryName'),
+                    'org': res.get('ipVersion')
+                }
+        except:
+            continue
+    return None
 
-        alert_body = f"""
+def send_login_tracking_alert(user_email="User"):
+    data = get_client_ip_details()
+    
+    ist = pytz.timezone('Asia/Kolkata')
+    time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
+    
+    if data:
+        ip = data.get('ip', 'Not Found')
+        city = data.get('city', 'Not Found')
+        region = data.get('region', 'Not Found')
+        country = data.get('country', 'Not Found')
+        org = data.get('org', 'Not Found')
+    else:
+        ip = city = region = country = org = "Unable to fetch (Network Timeout)"
+
+    alert_body = f"""
 🚨 NEW USER LOGIN ALERT!
 
 👤 User Identifier: {user_email}
@@ -150,14 +189,9 @@ def send_login_tracking_alert(user_email="Google OAuth User"):
 🗺️ State/Region: {region}
 🏳️ Country: {country}
 📡 Network Provider (ISP): {org}
-        """
+    """
 
-        send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", alert_body)
-    except Exception as e:
-        # Fallback in case API faces any issue
-        ist = pytz.timezone('Asia/Kolkata')
-        time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
-        send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", f"User logged in at {time_ist}, but IP details could not be retrieved.")
+    send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", alert_body)
 
 # ================= 4. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
@@ -183,7 +217,7 @@ if not st.session_state.logged_in:
     if result and "token" in result:
         st.session_state.logged_in = True
         st.session_state.token = result["token"]
-        send_login_tracking_alert("Google Account User")
+        send_login_tracking_alert("Google OAuth User")
         st.rerun()
 
     st.markdown("<p style='text-align:center; margin:15px 0; color:#cbd5e1;'>─── OR ───</p>", unsafe_allow_html=True)
@@ -296,4 +330,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-        
+                    
