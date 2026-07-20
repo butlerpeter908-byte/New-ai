@@ -4,23 +4,13 @@ import smtplib
 import random 
 import time
 from email.mime.text import MIMEText
-from streamlit_oauth import OAuth2Component
 
 # ================= 1. SETUP =================
-GROQ_KEY = "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"
+# Updated Groq Key
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
-
-# GOOGLE OAUTH CREDENTIALS
-CLIENT_ID = "1099072935326-kl56dikg9pnho1nm68evt8gem0kj2deh.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
-AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-TOKEN_URL = "https://oauth2.googleapis.com/token"
-REFRESH_TOKEN_URL = TOKEN_URL
-REVOKE_TOKEN_URL = "https://oauth2.googleapis.com/revoke"
-
-oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
 client = Groq(api_key=GROQ_KEY)
 
@@ -77,7 +67,6 @@ st.markdown("""
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "messages" not in st.session_state: st.session_state.messages = []
-if "user_email" not in st.session_state: st.session_state.user_email = ""
 
 DISPOSABLE_DOMAINS = [
     "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com", 
@@ -103,29 +92,11 @@ def send_mail(to, sub, body):
     except: 
         return False
 
-# ================= 4. LOGIN (GOOGLE OAUTH + EMAIL OTP) =================
+# ================= 4. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
     st.write("")
 
-    # OPTION 1: Continue with Google
-    result = oauth2.authorize_button(
-        name="Continue with Google",
-        icon="https://www.google.com/favicon.ico",
-        redirect_uri="https://9s2s.streamlit.app/component/streamlit_oauth.authorize_button",
-        scope="openid email profile",
-        key="google_auth",
-        use_container_width=True,
-    )
-
-    if result and "token" in result:
-        st.session_state.logged_in = True
-        st.session_state.token = result["token"]
-        st.rerun()
-
-    st.markdown("<p style='text-align:center; margin:15px 0;'>─── OR ───</p>", unsafe_allow_html=True)
-
-    # OPTION 2: Email OTP Login
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
@@ -137,7 +108,6 @@ if not st.session_state.logged_in:
                         send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
                         st.session_state.generated_otp = otp
                         st.session_state.otp_sent = True
-                        st.session_state.user_email = email
                         st.rerun()
                     else:
                         st.error("Failed to send email. Check your connection or email ID.")
@@ -157,7 +127,6 @@ if not st.session_state.logged_in:
 
     st.stop()
 
-
 # ================= 5. MAIN INTERFACE =================
 with st.sidebar:
     st.header("🛸 Menu")
@@ -169,7 +138,6 @@ with st.sidebar:
         st.rerun()
 
 if nav == "💬 Nexus Chat":
-    # Welcome Box
     st.markdown("""
         <div class='chat-card' style='text-align: center; margin-bottom: 15px;'>
             <h2 style='margin: 0; padding: 0;'>🚀 WELCOME TO NEXUS AI</h2>
@@ -177,7 +145,6 @@ if nav == "💬 Nexus Chat":
         </div>
     """, unsafe_allow_html=True)
     
-    # Chat Area
     st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
     for m in st.session_state.messages:
         c = "user-msg" if m["role"] == "user" else "ai-msg"
@@ -236,4 +203,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-                
+        
