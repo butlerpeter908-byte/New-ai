@@ -6,7 +6,7 @@ import time
 from email.mime.text import MIMEText
 
 # ================= 1. SETUP =================
-GROQ_KEY = "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"
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
