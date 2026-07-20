@@ -4,13 +4,23 @@ import smtplib
 import random 
 import time
 from email.mime.text import MIMEText
+from streamlit_oauth import OAuth2Component
 
 # ================= 1. SETUP =================
-# Updated Groq Key
+# Updated Groq Key & Google OAuth Credentials
 GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
+
+CLIENT_ID = "1099072935326-kl56dikg9pnho1nm68evt8gem0kj2deh.apps.googleusercontent.com"
+CLIENT_SECRET = "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"
+AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+TOKEN_URL = "https://oauth2.googleapis.com/token"
+REFRESH_TOKEN_URL = TOKEN_URL
+REVOKE_TOKEN_URL = "https://oauth2.googleapis.com/revoke"
+
+oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
 client = Groq(api_key=GROQ_KEY)
 
@@ -97,6 +107,24 @@ if not st.session_state.logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
     st.write("")
 
+    # CONTINUE WITH GOOGLE BUTTON
+    result = oauth2.authorize_button(
+        name="Continue with Google",
+        icon="https://www.google.com/favicon.ico",
+        redirect_uri="https://9s2s.streamlit.app/component/streamlit_oauth.authorize_button",
+        scope="openid email profile",
+        key="google_auth",
+        use_container_width=True,
+    )
+
+    if result and "token" in result:
+        st.session_state.logged_in = True
+        st.session_state.token = result["token"]
+        st.rerun()
+
+    st.markdown("<p style='text-align:center; margin:15px 0;'>─── OR ───</p>", unsafe_allow_html=True)
+
+    # EMAIL OTP LOGIN
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
@@ -203,4 +231,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-        
+                     
