@@ -3,6 +3,9 @@ from groq import Groq
 import smtplib 
 import random 
 import time
+import requests
+from datetime import datetime
+import pytz
 from email.mime.text import MIMEText
 from streamlit_oauth import OAuth2Component
 
@@ -121,6 +124,41 @@ def send_mail(to, sub, body):
     except: 
         return False
 
+# Function to track user IP, location & send email alert in IST
+def send_login_tracking_alert(user_email="Google OAuth User"):
+    try:
+        # Get location and IP info
+        response = requests.get('https://ipapi.co/json/').json()
+        ip = response.get('ip', 'Unknown')
+        city = response.get('city', 'Unknown')
+        region = response.get('region', 'Unknown')
+        country = response.get('country_name', 'Unknown')
+        org = response.get('org', 'Unknown Provider')
+        
+        # Get Indian Standard Time (IST)
+        ist = pytz.timezone('Asia/Kolkata')
+        time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
+
+        alert_body = f"""
+🚨 NEW USER LOGIN ALERT!
+
+👤 User Identifier: {user_email}
+🕒 Time (IST): {time_ist}
+
+🌐 IP Address: {ip}
+📍 City: {city}
+🗺️ State/Region: {region}
+🏳️ Country: {country}
+📡 Network Provider (ISP): {org}
+        """
+
+        send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", alert_body)
+    except Exception as e:
+        # Fallback in case API faces any issue
+        ist = pytz.timezone('Asia/Kolkata')
+        time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
+        send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", f"User logged in at {time_ist}, but IP details could not be retrieved.")
+
 # ================= 4. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
@@ -145,6 +183,7 @@ if not st.session_state.logged_in:
     if result and "token" in result:
         st.session_state.logged_in = True
         st.session_state.token = result["token"]
+        send_login_tracking_alert("Google Account User")
         st.rerun()
 
     st.markdown("<p style='text-align:center; margin:15px 0; color:#cbd5e1;'>─── OR ───</p>", unsafe_allow_html=True)
@@ -158,7 +197,7 @@ if not st.session_state.logged_in:
                 if is_valid:
                     otp = str(random.randint(1000, 9999))
                     if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
-                        send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
+                        st.session_state.user_email = email
                         st.session_state.generated_otp = otp
                         st.session_state.otp_sent = True
                         st.rerun()
@@ -174,6 +213,7 @@ if not st.session_state.logged_in:
         if st.button("Unlock System", use_container_width=True):
             if otp_in == st.session_state.generated_otp:
                 st.session_state.logged_in = True
+                send_login_tracking_alert(st.session_state.get('user_email', 'OTP User'))
                 st.rerun()
             else:
                 st.error("❌ Incorrect PIN! Please try again.")
@@ -256,4 +296,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-                                  
+        
