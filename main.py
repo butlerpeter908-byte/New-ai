@@ -8,7 +8,7 @@ from email.mime.text import MIMEText
 # ================= 1. SETUP =================
 GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
-APP_PASS = "rkpi toiq sdgj vfvn" 
+APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
 
 client = Groq(api_key=GROQ_KEY)
@@ -183,4 +183,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-        
+    
