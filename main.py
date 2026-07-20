@@ -4,18 +4,29 @@ import smtplib
 import random 
 import time
 from email.mime.text import MIMEText
+from streamlit_oauth import OAuth2Component
 
 # ================= 1. SETUP =================
-GROQ_KEY = "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"
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
+
+# GOOGLE OAUTH CREDENTIALS
+CLIENT_ID = "1099072935326-kl56dikg9pnho1nm68evt8gem0kj2deh.apps.googleusercontent.com"
+CLIENT_SECRET = "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"
+AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
+TOKEN_URL = "https://oauth2.googleapis.com/token"
+REFRESH_TOKEN_URL = TOKEN_URL
+REVOKE_TOKEN_URL = "https://oauth2.googleapis.com/revoke"
+
+oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 
 client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="MR NEXUS AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI (High Contrast) =================
+# ================= 2. LIVE PREMIUM CYBER UI =================
 st.markdown("""
     <style>
     @keyframes bgMove {
@@ -66,8 +77,8 @@ st.markdown("""
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "messages" not in st.session_state: st.session_state.messages = []
+if "user_email" not in st.session_state: st.session_state.user_email = ""
 
-# Blocked Temporary Email Domains List
 DISPOSABLE_DOMAINS = [
     "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com", 
     "sharklasers.com", "yopmail.com", "trashmail.com", "dispostable.com", 
@@ -76,15 +87,11 @@ DISPOSABLE_DOMAINS = [
 ]
 
 def is_valid_real_email(email):
-    """Check if email is formatted correctly and NOT a temporary email."""
     if "@" not in email or "." not in email:
         return False, "Invalid Email format!"
-    
     domain = email.strip().lower().split("@")[-1]
-    
     if domain in DISPOSABLE_DOMAINS or "temp" in domain or "disposable" in domain or "fake" in domain:
         return False, "🚫 Temporary / Disposable Emails are NOT allowed!"
-        
     return True, "OK"
 
 def send_mail(to, sub, body):
@@ -96,11 +103,29 @@ def send_mail(to, sub, body):
     except: 
         return False
 
-# ================= 4. LOGIN (OTP SECURED) =================
+# ================= 4. LOGIN (GOOGLE OAUTH + EMAIL OTP) =================
 if not st.session_state.logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
-    
-    # Agar OTP nahi bheja gaya hai, toh Email aur Initialize button dikhao
+    st.write("")
+
+    # OPTION 1: Continue with Google
+    result = oauth2.authorize_button(
+        name="Continue with Google",
+        icon="https://www.google.com/favicon.ico",
+        redirect_uri="https://9s2s.streamlit.app/component/streamlit_oauth.authorize_button",
+        scope="openid email profile",
+        key="google_auth",
+        use_container_width=True,
+    )
+
+    if result and "token" in result:
+        st.session_state.logged_in = True
+        st.session_state.token = result["token"]
+        st.rerun()
+
+    st.markdown("<p style='text-align:center; margin:15px 0;'>─── OR ───</p>", unsafe_allow_html=True)
+
+    # OPTION 2: Email OTP Login
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
@@ -112,6 +137,7 @@ if not st.session_state.logged_in:
                         send_mail(MY_GMAIL, "Login Attempt Alert!", f"User {email} has requested a PIN: {otp}")
                         st.session_state.generated_otp = otp
                         st.session_state.otp_sent = True
+                        st.session_state.user_email = email
                         st.rerun()
                     else:
                         st.error("Failed to send email. Check your connection or email ID.")
@@ -119,8 +145,6 @@ if not st.session_state.logged_in:
                     st.error(f"❌ {msg}")
             else:
                 st.error("Please enter a valid Email ID first!")
-                
-    # Agar OTP ja chuka hai, toh PIN validation khulega
     else:
         st.info("OTP sent successfully! Please check your email.")
         otp_in = st.text_input("Enter Secret PIN", type="password")
@@ -130,7 +154,7 @@ if not st.session_state.logged_in:
                 st.rerun()
             else:
                 st.error("❌ Incorrect PIN! Please try again.")
-                
+
     st.stop()
 
 
@@ -145,7 +169,7 @@ with st.sidebar:
         st.rerun()
 
 if nav == "💬 Nexus Chat":
-    # Welcome Card Box (Khali nahi dikhega ab)
+    # Welcome Box
     st.markdown("""
         <div class='chat-card' style='text-align: center; margin-bottom: 15px;'>
             <h2 style='margin: 0; padding: 0;'>🚀 WELCOME TO NEXUS AI</h2>
@@ -170,7 +194,6 @@ if nav == "💬 Nexus Chat":
 elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
     
-    # 1. CLEAR HISTORY OPTION
     if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.messages = []
         st.success("Chat history cleared successfully, Sir!")
@@ -179,7 +202,6 @@ elif nav == "⚙️ Settings":
         
     st.write("---")
     
-    # 2. PRIVACY POLICY
     with st.expander("🛡️ Privacy Policy"):
         st.markdown("""
         ### **Privacy Policy**
@@ -188,7 +210,6 @@ elif nav == "⚙️ Settings":
         * **No Logs:** Groq API connectivity bilkul secure hai aur end-to-end encrypted session use karti hai.
         """)
         
-    # 3. TERMS & CONDITIONS
     with st.expander("📄 Terms & Conditions"):
         st.markdown("""
         ### **Terms & Conditions**
@@ -197,7 +218,6 @@ elif nav == "⚙️ Settings":
         * **Responsibility:** AI ke generated response temporary hote hain; unhe backup karne ki zimmedari user ki hogi.
         """)
         
-    # 4. ABOUT
     with st.expander("ℹ️ About"):
         st.markdown(f"""
         ### **NEXUS AI v1.0**
