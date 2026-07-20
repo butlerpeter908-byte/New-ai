@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from streamlit_oauth import OAuth2Component
 
 # ================= 1. SETUP & CREDENTIALS =================
-GROQ_KEY = "Gsk_7gbMisIhP9ENVZbcRg7gWGdyb3FYF3y6PpoxJJM5EVKnzoRwfG5w"
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
