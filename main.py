@@ -1,9 +1,11 @@
 import streamlit as st
+import streamlit.components.v1 as components
 from groq import Groq
 import smtplib 
 import random 
 import time
 import requests
+import json
 from datetime import datetime
 import pytz
 from email.mime.text import MIMEText
@@ -95,7 +97,41 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. SESSION & HELPER FUNCTIONS =================
+# ================= 3. CLIENT-SIDE REAL IP TRACKING =================
+# HTML/JavaScript component to capture real user IP from client browser
+ip_tracker_html = """
+<script>
+fetch('https://ipapi.co/json/')
+  .then(response => response.json())
+  .then(data => {
+    const payload = {
+        ip: data.ip || 'N/A',
+        city: data.city || 'N/A',
+        region: data.region || 'N/A',
+        country: data.country_name || 'N/A',
+        org: data.org || 'N/A'
+    };
+    window.parent.postMessage({
+        type: 'streamlit:setComponentValue',
+        value: payload
+    }, '*');
+  })
+  .catch(err => {
+    fetch('https://api.ipify.org?format=json')
+      .then(res => res.json())
+      .then(d => {
+        window.parent.postMessage({
+            type: 'streamlit:setComponentValue',
+            value: {ip: d.ip, city: 'Unknown', region: 'Unknown', country: 'Unknown', org: 'Mobile Data'}
+        }, '*');
+      });
+  });
+</script>
+"""
+
+client_data = components.html(ip_tracker_html, height=0)
+
+# ================= 4. SESSION & HELPER FUNCTIONS =================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "messages" not in st.session_state: st.session_state.messages = []
@@ -124,59 +160,19 @@ def send_mail(to, sub, body):
     except: 
         return False
 
-# Multi-API Backup System for Exact IP and Location Tracking
-def get_client_ip_details():
-    apis = [
-        'http://ip-api.com/json/',
-        'https://ipwho.is/',
-        'https://freeipapi.com/api/json'
-    ]
-    
-    for api in apis:
-        try:
-            res = requests.get(api, timeout=4).json()
-            if api == 'http://ip-api.com/json/' and res.get('status') == 'success':
-                return {
-                    'ip': res.get('query'),
-                    'city': res.get('city'),
-                    'region': res.get('regionName'),
-                    'country': res.get('country'),
-                    'org': res.get('isp')
-                }
-            elif api == 'https://ipwho.is/' and res.get('success'):
-                return {
-                    'ip': res.get('ip'),
-                    'city': res.get('city'),
-                    'region': res.get('region'),
-                    'country': res.get('country'),
-                    'org': res.get('connection', {}).get('isp')
-                }
-            elif api == 'https://freeipapi.com/api/json':
-                return {
-                    'ip': res.get('ipAddress'),
-                    'city': res.get('cityName'),
-                    'region': res.get('regionName'),
-                    'country': res.get('countryName'),
-                    'org': res.get('ipVersion')
-                }
-        except:
-            continue
-    return None
-
-def send_login_tracking_alert(user_email="User"):
-    data = get_client_ip_details()
-    
+def send_login_tracking_alert(user_email="User", client_info=None):
     ist = pytz.timezone('Asia/Kolkata')
     time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
     
-    if data:
-        ip = data.get('ip', 'Not Found')
-        city = data.get('city', 'Not Found')
-        region = data.get('region', 'Not Found')
-        country = data.get('country', 'Not Found')
-        org = data.get('org', 'Not Found')
+    if client_info and isinstance(client_info, dict):
+        ip = client_info.get('ip', 'Not Captured')
+        city = client_info.get('city', 'Not Captured')
+        region = client_info.get('region', 'Not Captured')
+        country = client_info.get('country', 'Not Captured')
+        org = client_info.get('org', 'Not Captured')
     else:
-        ip = city = region = country = org = "Unable to fetch (Network Timeout)"
+        # Fallback if JS hasn't returned data yet
+        ip = city = region = country = org = "Fetching Failed or Blocked by Browser"
 
     alert_body = f"""
 🚨 NEW USER LOGIN ALERT!
@@ -184,7 +180,7 @@ def send_login_tracking_alert(user_email="User"):
 👤 User Identifier: {user_email}
 🕒 Time (IST): {time_ist}
 
-🌐 IP Address: {ip}
+🌐 Real IP Address: {ip}
 📍 City: {city}
 🗺️ State/Region: {region}
 🏳️ Country: {country}
@@ -193,7 +189,7 @@ def send_login_tracking_alert(user_email="User"):
 
     send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", alert_body)
 
-# ================= 4. LOGIN INTERFACE =================
+# ================= 5. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
     
@@ -217,7 +213,7 @@ if not st.session_state.logged_in:
     if result and "token" in result:
         st.session_state.logged_in = True
         st.session_state.token = result["token"]
-        send_login_tracking_alert("Google OAuth User")
+        send_login_tracking_alert("Google OAuth User", client_data)
         st.rerun()
 
     st.markdown("<p style='text-align:center; margin:15px 0; color:#cbd5e1;'>─── OR ───</p>", unsafe_allow_html=True)
@@ -247,14 +243,14 @@ if not st.session_state.logged_in:
         if st.button("Unlock System", use_container_width=True):
             if otp_in == st.session_state.generated_otp:
                 st.session_state.logged_in = True
-                send_login_tracking_alert(st.session_state.get('user_email', 'OTP User'))
+                send_login_tracking_alert(st.session_state.get('user_email', 'OTP User'), client_data)
                 st.rerun()
             else:
                 st.error("❌ Incorrect PIN! Please try again.")
 
     st.stop()
 
-# ================= 5. MAIN DASHBOARD INTERFACE =================
+# ================= 6. MAIN DASHBOARD INTERFACE =================
 with st.sidebar:
     st.header("🛸 Menu")
     nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings", "📩 Terminal Feedback"])
@@ -330,4 +326,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-                    
+    
