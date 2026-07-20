@@ -6,13 +6,13 @@ import time
 from email.mime.text import MIMEText
 from streamlit_oauth import OAuth2Component
 
-# ================= 1. SETUP =================
-# Updated Groq Key & Google OAuth Credentials
-GROQ_KEY = "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"
+# ================= 1. SETUP & CREDENTIALS =================
+GROQ_KEY = "Gsk_7gbMisIhP9ENVZbcRg7gWGdyb3FYF3y6PpoxJJM5EVKnzoRwfG5w"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
 
+# Google OAuth Configuration
 CLIENT_ID = "1099072935326-kl56dikg9pnho1nm68evt8gem0kj2deh.apps.googleusercontent.com"
 CLIENT_SECRET = "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"
 AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
@@ -21,12 +21,11 @@ REFRESH_TOKEN_URL = TOKEN_URL
 REVOKE_TOKEN_URL = "https://oauth2.googleapis.com/revoke"
 
 oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
-
 client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="MR NEXUS AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI =================
+# ================= 2. LIVE PREMIUM CYBER UI & BLINKING ANIMATION =================
 st.markdown("""
     <style>
     @keyframes bgMove {
@@ -70,6 +69,26 @@ st.markdown("""
         background: #6366f1 !important; 
         box-shadow: 0 0 20px #6366f1 !important; 
     }
+
+    /* Blinking Animation for Note */
+    @keyframes blink {
+        0% { opacity: 1; }
+        50% { opacity: 0.35; }
+        100% { opacity: 1; }
+    }
+    .blinking-note {
+        animation: blink 1.8s infinite ease-in-out;
+        background: rgba(239, 68, 68, 0.2);
+        border: 1px solid #ef4444;
+        color: #fca5a5 !important;
+        padding: 12px 16px;
+        border-radius: 12px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: 500;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -105,9 +124,15 @@ def send_mail(to, sub, body):
 # ================= 4. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
-    st.write("")
+    
+    # Blinking Notice
+    st.markdown("""
+        <div class="blinking-note">
+            ⚠️ <b>Note:</b> If the 'Continue with Google' option is not working, please try the alternative email login method below.
+        </div>
+    """, unsafe_allow_html=True)
 
-    # CONTINUE WITH GOOGLE BUTTON
+    # 1. GOOGLE LOGIN BUTTON
     result = oauth2.authorize_button(
         name="Continue with Google",
         icon="https://www.google.com/favicon.ico",
@@ -122,9 +147,9 @@ if not st.session_state.logged_in:
         st.session_state.token = result["token"]
         st.rerun()
 
-    st.markdown("<p style='text-align:center; margin:15px 0;'>─── OR ───</p>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; margin:15px 0; color:#cbd5e1;'>─── OR ───</p>", unsafe_allow_html=True)
 
-    # EMAIL OTP LOGIN
+    # 2. EMAIL OTP LOGIN
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
@@ -155,7 +180,7 @@ if not st.session_state.logged_in:
 
     st.stop()
 
-# ================= 5. MAIN INTERFACE =================
+# ================= 5. MAIN DASHBOARD INTERFACE =================
 with st.sidebar:
     st.header("🛸 Menu")
     nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings", "📩 Terminal Feedback"])
@@ -231,4 +256,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
-                     
+                                  
