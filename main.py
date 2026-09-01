@@ -4,15 +4,11 @@ from groq import Groq
 import smtplib 
 import random 
 import time
-import requests
-import json
-from datetime import datetime
-import pytz
 from email.mime.text import MIMEText
 from streamlit_oauth import OAuth2Component
 
-# ================= 1. SETUP & CREDENTIALS =================
-GROQ_KEY = "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"
+# ================= 1. SETUP =================
+GROQ_KEY = "Gsk_7gbMisIhP9ENVZbcRg7gWGdyb3FYF3y6PpoxJJM5EVKnzoRwfG5w"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj" 
 CREATOR = "mr owner"
@@ -30,28 +26,40 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="MR NEXUS AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI & BLINKING ANIMATION =================
+# ================= 2. 3D-STYLE CYBER UI ANIMATIONS =================
 st.markdown("""
     <style>
+    /* Background Animation */
     @keyframes bgMove {
         0% {background-position: 0% 50%;}
         50% {background-position: 100% 50%;}
         100% {background-position: 0% 50%;}
     }
     .stApp {
-        background: linear-gradient(-45deg, #0f172a, #4338ca, #be185d, #0f172a);
+        background: linear-gradient(-45deg, #0f172a, #1e1b4b, #312e81, #0f172a);
         background-size: 400% 400%;
-        animation: bgMove 10s ease infinite;
+        animation: bgMove 12s ease infinite;
     }
+    
+    /* Pop-Up Animation for Login Form */
+    @keyframes popUp {
+        0% { transform: translateY(150px) scale(0.8); opacity: 0; }
+        80% { transform: translateY(-10px) scale(1.02); opacity: 1; }
+        100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    
     .chat-card { 
-        background: rgba(0, 0, 0, 0.6) !important;
+        background: rgba(0, 0, 0, 0.65) !important;
         backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 20px;
-        border-radius: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(99, 102, 241, 0.4);
+        padding: 30px;
+        border-radius: 24px;
+        box-shadow: 0 15px 40px 0 rgba(0, 0, 0, 0.6);
+        animation: popUp 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
+    
     h1, h2, h3, p, label { color: #ffffff !important; font-weight: 500; }
+    
     .user-msg { 
         background: linear-gradient(90deg, #6366f1, #a855f7); 
         color: white !important; padding: 12px 20px; border-radius: 20px 20px 0 20px; 
@@ -63,19 +71,29 @@ st.markdown("""
         padding: 12px 20px; border-radius: 20px 20px 20px 0; margin: 10px 0;
         border-left: 4px solid #38bdf8;
     }
+
+    /* Input Field Styling */
+    div[data-baseweb="input"] {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+    }
+    
+    /* Sleek Button */
     .stButton>button { 
-        background: transparent !important; 
-        border: 2px solid #6366f1 !important; 
+        background: linear-gradient(90deg, #4f46e5, #9333ea) !important; 
+        border: none !important; 
         color: #ffffff !important; 
         border-radius: 50px !important;
         font-weight: bold !important;
+        padding: 10px 24px !important;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     .stButton>button:hover { 
-        background: #6366f1 !important; 
-        box-shadow: 0 0 20px #6366f1 !important; 
+        transform: translateY(-3px);
+        box-shadow: 0 10px 25px rgba(147, 51, 234, 0.5) !important; 
     }
 
-    /* Blinking Animation for Note */
     @keyframes blink {
         0% { opacity: 1; }
         50% { opacity: 0.35; }
@@ -97,58 +115,22 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. CLIENT-SIDE REAL IP TRACKING =================
-# HTML/JavaScript component to capture real user IP from client browser
-ip_tracker_html = """
-<script>
-fetch('https://ipapi.co/json/')
-  .then(response => response.json())
-  .then(data => {
-    const payload = {
-        ip: data.ip || 'N/A',
-        city: data.city || 'N/A',
-        region: data.region || 'N/A',
-        country: data.country_name || 'N/A',
-        org: data.org || 'N/A'
-    };
-    window.parent.postMessage({
-        type: 'streamlit:setComponentValue',
-        value: payload
-    }, '*');
-  })
-  .catch(err => {
-    fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(d => {
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            value: {ip: d.ip, city: 'Unknown', region: 'Unknown', country: 'Unknown', org: 'Mobile Data'}
-        }, '*');
-      });
-  });
-</script>
-"""
-
-client_data = components.html(ip_tracker_html, height=0)
-
-# ================= 4. SESSION & HELPER FUNCTIONS =================
+# ================= 3. SESSION & HELPER FUNCTIONS =================
 if "logged_in" not in st.session_state: st.session_state.logged_in = False
 if "otp_sent" not in st.session_state: st.session_state.otp_sent = False
 if "messages" not in st.session_state: st.session_state.messages = []
 
 DISPOSABLE_DOMAINS = [
     "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com", 
-    "sharklasers.com", "yopmail.com", "trashmail.com", "dispostable.com", 
-    "getnada.com", "tempail.com", "inboxkitten.com", "fakeinbox.com",
-    "maildrop.cc", "crazymailing.com", "tmail.ws", "temp-mail.org"
+    "yopmail.com", "trashmail.com", "getnada.com", "tempail.com"
 ]
 
 def is_valid_real_email(email):
     if "@" not in email or "." not in email:
         return False, "Invalid Email format!"
     domain = email.strip().lower().split("@")[-1]
-    if domain in DISPOSABLE_DOMAINS or "temp" in domain or "disposable" in domain or "fake" in domain:
-        return False, "🚫 Temporary / Disposable Emails are NOT allowed!"
+    if domain in DISPOSABLE_DOMAINS or "temp" in domain or "disposable" in domain:
+        return False, "🚫 Temporary Emails not allowed!"
     return True, "OK"
 
 def send_mail(to, sub, body):
@@ -160,47 +142,35 @@ def send_mail(to, sub, body):
     except: 
         return False
 
-def send_login_tracking_alert(user_email="User", client_info=None):
-    ist = pytz.timezone('Asia/Kolkata')
-    time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
-    
-    if client_info and isinstance(client_info, dict):
-        ip = client_info.get('ip', 'Not Captured')
-        city = client_info.get('city', 'Not Captured')
-        region = client_info.get('region', 'Not Captured')
-        country = client_info.get('country', 'Not Captured')
-        org = client_info.get('org', 'Not Captured')
-    else:
-        # Fallback if JS hasn't returned data yet
-        ip = city = region = country = org = "Fetching Failed or Blocked by Browser"
-
-    alert_body = f"""
-🚨 NEW USER LOGIN ALERT!
-
-👤 User Identifier: {user_email}
-🕒 Time (IST): {time_ist}
-
-🌐 Real IP Address: {ip}
-📍 City: {city}
-🗺️ State/Region: {region}
-🏳️ Country: {country}
-📡 Network Provider (ISP): {org}
-    """
-
-    send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", alert_body)
-
-# ================= 5. LOGIN INTERFACE =================
+# ================= 4. ANIMATED LOGIN INTERFACE =================
 if not st.session_state.logged_in:
-    st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
     
-    # Blinking Notice
+    # 🌟 LOTTIE ANIMATION (3D Character Vibe)
+    lottie_html = """
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <div style="display: flex; justify-content: center; margin-bottom: -30px;">
+        <lottie-player 
+            src="https://lottie.host/8b2f6f59-33ff-4927-8025-a7bdfd9b3506/U40oM5Z7c6.json" 
+            background="transparent" 
+            speed="1" 
+            style="width: 250px; height: 250px;" 
+            loop 
+            autoplay>
+        </lottie-player>
+    </div>
+    """
+    components.html(lottie_html, height=220)
+
+    # 🌟 POP-UP LOGIN FORM
+    st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p style='color:#a5b4fc !important;'>System Authentication Required</p>", unsafe_allow_html=True)
+    
     st.markdown("""
         <div class="blinking-note">
-            ⚠️ <b>Note:</b> If the 'Continue with Google' option is not working, please try the alternative email login method below.
+            ⚠️ <b>Note:</b> If 'Continue with Google' fails, please use the OTP method below.
         </div>
     """, unsafe_allow_html=True)
 
-    # 1. GOOGLE LOGIN BUTTON
+    # GOOGLE LOGIN
     result = oauth2.authorize_button(
         name="Continue with Google",
         icon="https://www.google.com/favicon.ico",
@@ -213,47 +183,43 @@ if not st.session_state.logged_in:
     if result and "token" in result:
         st.session_state.logged_in = True
         st.session_state.token = result["token"]
-        send_login_tracking_alert("Google OAuth User", client_data)
         st.rerun()
 
     st.markdown("<p style='text-align:center; margin:15px 0; color:#cbd5e1;'>─── OR ───</p>", unsafe_allow_html=True)
 
-    # 2. EMAIL OTP LOGIN
+    # OTP LOGIN
     if not st.session_state.otp_sent:
-        email = st.text_input("Enter Email ID")
+        email = st.text_input("Enter Email ID", placeholder="your.email@example.com")
         if st.button("Initialize Access", use_container_width=True):
             if email:
                 is_valid, msg = is_valid_real_email(email)
                 if is_valid:
                     otp = str(random.randint(1000, 9999))
                     if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
-                        st.session_state.user_email = email
                         st.session_state.generated_otp = otp
                         st.session_state.otp_sent = True
                         st.rerun()
                     else:
-                        st.error("Failed to send email. Check your connection or email ID.")
-                else:
-                    st.error(f"❌ {msg}")
+                        st.error("Mail send nahi hua. Connection check karo.")
             else:
-                st.error("Please enter a valid Email ID first!")
+                st.error("Pehle valid Email ID daalo Sir!")
     else:
-        st.info("OTP sent successfully! Please check your email.")
+        st.info("OTP bhej diya hai! Apna inbox check karo.")
         otp_in = st.text_input("Enter Secret PIN", type="password")
         if st.button("Unlock System", use_container_width=True):
             if otp_in == st.session_state.generated_otp:
                 st.session_state.logged_in = True
-                send_login_tracking_alert(st.session_state.get('user_email', 'OTP User'), client_data)
                 st.rerun()
             else:
-                st.error("❌ Incorrect PIN! Please try again.")
+                st.error("❌ Galat PIN! Wapas try karo.")
 
+    st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
-# ================= 6. MAIN DASHBOARD INTERFACE =================
+# ================= 5. MAIN INTERFACE =================
 with st.sidebar:
     st.header("🛸 Menu")
-    nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings", "📩 Terminal Feedback"])
+    nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings"])
     st.markdown("---")
     if st.button("System Logout"): 
         st.session_state.logged_in = False
@@ -264,7 +230,7 @@ if nav == "💬 Nexus Chat":
     st.markdown("""
         <div class='chat-card' style='text-align: center; margin-bottom: 15px;'>
             <h2 style='margin: 0; padding: 0;'>🚀 WELCOME TO NEXUS AI</h2>
-            <p style='margin-top: 5px; opacity: 0.8;'>Your Personal AI Companion is Ready</p>
+            <p style='margin-top: 5px; opacity: 0.8;'>Aapka Jarvis ready hai Sir.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -276,54 +242,16 @@ if nav == "💬 Nexus Chat":
     q = st.chat_input("Connect with AI...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}"}] + st.session_state.messages)
+        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}, Name: Jarvis"}] + st.session_state.messages)
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
         st.rerun()
     st.markdown("</div>", unsafe_allow_html=True)
 
 elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
-    
     if st.button("🗑️ Clear History", use_container_width=True):
         st.session_state.messages = []
-        st.success("Chat history cleared successfully, Sir!")
+        st.success("Chat history clear kar di hai, Sir!")
         time.sleep(1)
         st.rerun()
         
-    st.write("---")
-    
-    with st.expander("🛡️ Privacy Policy"):
-        st.markdown("""
-        ### **Privacy Policy**
-        * **Data Protection:** Hum aapka koi bhi data ya chats server par store nahi karte.
-        * **Session-Based:** Yeh interface poori tarah se session-based hai. Jaise hi aap page refresh karenge ya tab close karenge, aapki saari memory clear ho jayegi.
-        * **No Logs:** Groq API connectivity bilkul secure hai aur end-to-end encrypted session use karti hai.
-        """)
-        
-    with st.expander("📄 Terms & Conditions"):
-        st.markdown("""
-        ### **Terms & Conditions**
-        * **Usage:** Yeh ek personal AI assistant project hai, jo sirf educational aur non-commercial use ke liye design kiya gaya hai.
-        * **API Compliance:** Is application ka misuse, heavy automated requests, ya script-based targeting strictly prohibited hai.
-        * **Responsibility:** AI ke generated response temporary hote hain; unhe backup karne ki zimmedari user ki hogi.
-        """)
-        
-    with st.expander("ℹ️ About"):
-        st.markdown(f"""
-        ### **NEXUS AI v1.0**
-        * **Status:** Fully Optimized & Secure Deployment.
-        * **Architecture:** Streamlit Core UI equipped with Groq LLM Acceleration.
-        * **Developer & Creator:** {CREATOR}
-        * *Systems are running under secure environment regulations.*
-        """)
-
-elif nav == "📩 Terminal Feedback":
-    st.subheader("Direct Link")
-    fb = st.text_area("Log your message")
-    if st.button("Transmit"):
-        if fb:
-            send_mail(MY_GMAIL, "Feedback", fb)
-            st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
-        else:
-            st.error("Please write some feedback before transmitting.")
-    
