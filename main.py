@@ -1,4 +1,3 @@
-
 import streamlit as st
 import streamlit.components.v1 as components
 from groq import Groq
@@ -31,7 +30,7 @@ client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="MR NEXUS AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI & BLINKING ANIMATION =================
+# ================= 2. LIVE PREMIUM CYBER UI & ANIMATIONS =================
 st.markdown("""
     <style>
     @keyframes bgMove {
@@ -44,6 +43,13 @@ st.markdown("""
         background-size: 400% 400%;
         animation: bgMove 10s ease infinite;
     }
+    
+    @keyframes popUp {
+        0% { transform: translateY(120px) scale(0.85); opacity: 0; }
+        80% { transform: translateY(-8px) scale(1.01); opacity: 1; }
+        100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+    
     .chat-card {
         background: rgba(0, 0, 0, 0.6) !important;
         backdrop-filter: blur(20px);
@@ -51,6 +57,7 @@ st.markdown("""
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        animation: popUp 1.1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
     h1, h2, h3, p, label { color: #ffffff !important; font-weight: 500; }
     .user-msg {
@@ -76,6 +83,20 @@ st.markdown("""
         box-shadow: 0 0 20px #6366f1 !important;
     }
 
+    /* Dummy Media Icons Styling */
+    .dummy-icon-btn > button {
+        background: rgba(255, 255, 255, 0.08) !important;
+        border: 1px solid rgba(99, 102, 241, 0.6) !important;
+        border-radius: 50% !important;
+        width: 42px !important;
+        height: 42px !important;
+        padding: 0 !important;
+        font-size: 18px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+
     /* Blinking Animation for Note */
     @keyframes blink {
         0% { opacity: 1; }
@@ -99,7 +120,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ================= 3. CLIENT-SIDE REAL IP TRACKING =================
-# HTML/JavaScript component to capture real user IP from client browser
 ip_tracker_html = """
 <script>
 fetch('https://ipapi.co/json/')
@@ -141,22 +161,10 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 DISPOSABLE_DOMAINS = [
-    "tempmail.com",
-    "10minutemail.com",
-    "mailinator.com",
-    "guerrillamail.com",
-    "sharklasers.com",
-    "yopmail.com",
-    "trashmail.com",
-    "dispostable.com",
-    "getnada.com",
-    "tempail.com",
-    "inboxkitten.com",
-    "fakeinbox.com",
-    "maildrop.cc",
-    "crazymailing.com",
-    "tmail.ws",
-    "temp-mail.org"
+    "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com",
+    "sharklasers.com", "yopmail.com", "trashmail.com", "dispostable.com",
+    "getnada.com", "tempail.com", "inboxkitten.com", "fakeinbox.com",
+    "maildrop.cc", "crazymailing.com", "tmail.ws", "temp-mail.org"
 ]
 
 def is_valid_real_email(email):
@@ -211,6 +219,23 @@ def send_login_tracking_alert(user_email="User", client_info=None):
 
 # ================= 5. LOGIN INTERFACE =================
 if not st.session_state.logged_in:
+    
+    # 🌟 3D ANIMATED CHARACTER (LOTTIE PLAYER)
+    lottie_html = """
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <div style="display: flex; justify-content: center; margin-bottom: -25px;">
+        <lottie-player 
+            src="https://lottie.host/8b2f6f59-33ff-4927-8025-a7bdfd9b3506/U40oM5Z7c6.json" 
+            background="transparent" 
+            speed="1" 
+            style="width: 220px; height: 220px;" 
+            loop 
+            autoplay>
+        </lottie-player>
+    </div>
+    """
+    components.html(lottie_html, height=200)
+
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
 
     st.markdown("""
@@ -291,14 +316,27 @@ if nav == "💬 Nexus Chat":
     for m in st.session_state.messages:
         c = "user-msg" if m["role"] == "user" else "ai-msg"
         st.markdown(f'<div class="{c}">{m["content"]}</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    # 🎙️📷 DUMMY MEDIA ICONS BAR (JUST FOR SHOW)
+    col1, col2, col3 = st.columns([1, 1, 8])
+    with col1:
+        st.markdown("<div class='dummy-icon-btn'>", unsafe_allow_html=True)
+        if st.button("🎙️", key="mic_dummy", help="Voice Input (UI Demo)"):
+            st.toast("🎙️ Voice mode UI indicator active.")
+        st.markdown("</div>", unsafe_allow_html=True)
+    with col2:
+        st.markdown("<div class='dummy-icon-btn'>", unsafe_allow_html=True)
+        if st.button("📷", key="cam_dummy", help="Camera Vision (UI Demo)"):
+            st.toast("📷 Camera mode UI indicator active.")
+        st.markdown("</div>", unsafe_allow_html=True)
 
     q = st.chat_input("Connect with AI...")
     if q:
         st.session_state.messages.append({"role": "user", "content": q})
-        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}"}] + st.session_state.messages)
+        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}, Name: Jarvis"}] + st.session_state.messages)
         st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
         st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
 
 elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
@@ -345,3 +383,4 @@ elif nav == "📩 Terminal Feedback":
             st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
         else:
             st.error("Please write some feedback before transmitting.")
+                        
