@@ -1,36 +1,25 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from groq import Groq
 import smtplib
 import random
 import time
+import html
 import requests
-import json
-from datetime import datetime
+from datetime import datetime, timedelta
 import pytz
 from email.mime.text import MIMEText
-from streamlit_oauth import OAuth2Component
 
-# ================= 1. SETUP & CREDENTIALS =================
-GROQ_KEY = "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"
+# ================= 1. SETUP & CREDENTIALS (HARDCODED) =================
+GROQ_KEY = "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"
 MY_GMAIL = "butlerpeter908@gmail.com"
 APP_PASS = "mhja kxfr ptbb mazj"
-CREATOR = "mr owner"
+CREATOR  = "mr owner"
 
-# Google OAuth Configuration
-CLIENT_ID = "1099072935326-kl56dikg9pnho1nm68evt8gem0kj2deh.apps.googleusercontent.com"
-CLIENT_SECRET = "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"
-AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/v2/auth"
-TOKEN_URL = "https://oauth2.googleapis.com/token"
-REFRESH_TOKEN_URL = TOKEN_URL
-REVOKE_TOKEN_URL = "https://oauth2.googleapis.com/revoke"
-
-oauth2 = OAuth2Component(CLIENT_ID, CLIENT_SECRET, AUTHORIZE_URL, TOKEN_URL, REFRESH_TOKEN_URL, REVOKE_TOKEN_URL)
 client = Groq(api_key=GROQ_KEY)
 
 st.set_page_config(page_title="MR NEXUS AI", layout="centered")
 
-# ================= 2. LIVE PREMIUM CYBER UI & ANIMATIONS =================
+# ================= 2. SAME PREMIUM CYBER UI =================
 st.markdown("""
     <style>
     @keyframes bgMove {
@@ -43,13 +32,6 @@ st.markdown("""
         background-size: 400% 400%;
         animation: bgMove 10s ease infinite;
     }
-    
-    @keyframes popUp {
-        0% { transform: translateY(120px) scale(0.85); opacity: 0; }
-        80% { transform: translateY(-8px) scale(1.01); opacity: 1; }
-        100% { transform: translateY(0) scale(1); opacity: 1; }
-    }
-    
     .chat-card {
         background: rgba(0, 0, 0, 0.6) !important;
         backdrop-filter: blur(20px);
@@ -57,19 +39,25 @@ st.markdown("""
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
-        animation: popUp 1.1s cubic-bezier(0.25, 1, 0.5, 1) forwards;
     }
     h1, h2, h3, p, label { color: #ffffff !important; font-weight: 500; }
     .user-msg {
         background: linear-gradient(90deg, #6366f1, #a855f7);
-        color: white !important; padding: 12px 20px; border-radius: 20px 20px 0 20px;
-        margin: 10px 0; text-align: right; box-shadow: 0 0 15px #6366f1;
+        color: white !important; padding: 12px 20px;
+        border-radius: 20px 20px 0 20px;
+        margin: 10px 0; text-align: right;
+        box-shadow: 0 0 15px #6366f1;
         font-weight: bold;
+        white-space: pre-wrap;
+        word-wrap: break-word;
     }
     .ai-msg {
         background: rgba(255, 255, 255, 0.15); color: #ffffff !important;
-        padding: 12px 20px; border-radius: 20px 20px 20px 0; margin: 10px 0;
+        padding: 12px 20px; border-radius: 20px 20px 20px 0;
+        margin: 10px 0;
         border-left: 4px solid #38bdf8;
+        white-space: pre-wrap;
+        word-wrap: break-word;
     }
     .stButton>button {
         background: transparent !important;
@@ -82,22 +70,6 @@ st.markdown("""
         background: #6366f1 !important;
         box-shadow: 0 0 20px #6366f1 !important;
     }
-
-    /* Dummy Media Icons Styling */
-    .dummy-icon-btn > button {
-        background: rgba(255, 255, 255, 0.08) !important;
-        border: 1px solid rgba(99, 102, 241, 0.6) !important;
-        border-radius: 50% !important;
-        width: 42px !important;
-        height: 42px !important;
-        padding: 0 !important;
-        font-size: 18px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-    }
-
-    /* Blinking Animation for Note */
     @keyframes blink {
         0% { opacity: 1; }
         50% { opacity: 0.35; }
@@ -119,59 +91,72 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# ================= 3. CLIENT-SIDE REAL IP TRACKING =================
-ip_tracker_html = """
-<script>
-fetch('https://ipapi.co/json/')
-  .then(response => response.json())
-  .then(data => {
-    const payload = {
-        ip: data.ip || 'N/A',
-        city: data.city || 'N/A',
-        region: data.region || 'N/A',
-        country: data.country_name || 'N/A',
-        org: data.org || 'N/A'
-    };
-    window.parent.postMessage({
-        type: 'streamlit:setComponentValue',
-        value: payload
-    }, '*');
-  })
-  .catch(err => {
-    fetch('https://api.ipify.org?format=json')
-      .then(res => res.json())
-      .then(d => {
-        window.parent.postMessage({
-            type: 'streamlit:setComponentValue',
-            value: {ip: d.ip, city: 'Unknown', region: 'Unknown', country: 'Unknown', org: 'Mobile Data'}
-        }, '*');
-      });
-  });
-</script>
-"""
+# ================= 3. REAL CLIENT IP TRACKING =================
+def get_real_client_ip():
+    try:
+        headers = st.context.headers
+        xff = headers.get("X-Forwarded-For", "")
+        if xff:
+            return xff.split(",")[0].strip()
+        return headers.get("X-Real-IP", "") or headers.get("CF-Connecting-IP", "") or "Not Captured"
+    except Exception:
+        return "Not Captured"
 
-client_data = components.html(ip_tracker_html, height=0)
+def lookup_ip_info(ip):
+    try:
+        if not ip or ip in ("Not Captured", "127.0.0.1", "::1"):
+            return {}
+        r = requests.get(f"https://ipapi.co/{ip}/json/", timeout=5)
+        if r.status_code == 200:
+            d = r.json()
+            return {
+                "city": d.get("city", "N/A"),
+                "region": d.get("region", "N/A"),
+                "country": d.get("country_name", "N/A"),
+                "org": d.get("org", "N/A"),
+            }
+    except Exception:
+        pass
+    return {}
 
-# ================= 4. SESSION & HELPER FUNCTIONS =================
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-if "otp_sent" not in st.session_state:
-    st.session_state.otp_sent = False
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# ================= 4. SESSION INIT =================
+for key, default in {
+    "messages": [],
+    "generated_otp": None,
+    "otp_expiry": None,
+    "otp_attempts": 0,
+    "last_otp_time": 0,
+    "user_email": None,
+    "otp_sent": False,
+    "otp_logged_in": False,
+    "login_alert_sent": False,
+}.items():
+    if key not in st.session_state:
+        st.session_state[key] = default
 
+# ================= 5. CONSTANTS =================
 DISPOSABLE_DOMAINS = [
-    "tempmail.com", "10minutemail.com", "mailinator.com", "guerrillamail.com",
-    "sharklasers.com", "yopmail.com", "trashmail.com", "dispostable.com",
-    "getnada.com", "tempail.com", "inboxkitten.com", "fakeinbox.com",
-    "maildrop.cc", "crazymailing.com", "tmail.ws", "temp-mail.org"
+    "tempmail.com","10minutemail.com","mailinator.com","guerrillamail.com",
+    "sharklasers.com","yopmail.com","trashmail.com","dispostable.com",
+    "getnada.com","tempail.com","inboxkitten.com","fakeinbox.com",
+    "maildrop.cc","crazymailing.com","tmail.ws","temp-mail.org",
+    "temp-mail.io","throwawaymail.com","mohmal.com","emailondeck.com",
 ]
+OTP_VALIDITY_MIN    = 5
+OTP_MAX_ATTEMPTS    = 3
+OTP_RESEND_COOLDOWN = 60
+MAX_MESSAGE_LEN     = 2000
+MAX_HISTORY         = 15
 
+# ================= 6. HELPERS =================
 def is_valid_real_email(email):
+    email = (email or "").strip().lower()
     if "@" not in email or "." not in email:
         return False, "Invalid Email format!"
-    domain = email.strip().lower().split("@")[-1]
-    if domain in DISPOSABLE_DOMAINS or "temp" in domain or "disposable" in domain or "fake" in domain:
+    domain = email.split("@")[-1]
+    if any(domain == d or domain.endswith("." + d) for d in DISPOSABLE_DOMAINS):
+        return False, "🚫 Temporary / Disposable Emails are NOT allowed!"
+    if any(x in domain for x in ["temp", "disposable", "fake", "throwaway"]):
         return False, "🚫 Temporary / Disposable Emails are NOT allowed!"
     return True, "OK"
 
@@ -181,27 +166,18 @@ def send_mail(to, sub, body):
         msg['Subject'] = sub
         msg['From'] = MY_GMAIL
         msg['To'] = to
-        with smtplib.SMTP_SSL('smtp.gmail.com', 465) as s:
+        with smtplib.SMTP_SSL('smtp.gmail.com', 465, timeout=15) as s:
             s.login(MY_GMAIL, APP_PASS)
             s.send_message(msg)
-        return True
+        return True, "OK"
     except Exception as e:
-        print(f"Email error: {e}")
-        return False
+        return False, str(e)
 
-def send_login_tracking_alert(user_email="User", client_info=None):
+def send_login_tracking_alert(user_email="User"):
     ist = pytz.timezone('Asia/Kolkata')
     time_ist = datetime.now(ist).strftime('%Y-%m-%d %I:%M:%S %p IST')
-
-    if client_info and isinstance(client_info, dict):
-        ip = client_info.get('ip', 'Not Captured')
-        city = client_info.get('city', 'Not Captured')
-        region = client_info.get('region', 'Not Captured')
-        country = client_info.get('country', 'Not Captured')
-        org = client_info.get('org', 'Not Captured')
-    else:
-        ip = city = region = country = org = "Fetching Failed or Blocked by Browser"
-
+    ip = get_real_client_ip()
+    info = lookup_ip_info(ip)
     alert_body = f"""
 🚨 NEW USER LOGIN ALERT!
 
@@ -209,33 +185,24 @@ def send_login_tracking_alert(user_email="User", client_info=None):
 🕒 Time (IST): {time_ist}
 
 🌐 Real IP Address: {ip}
-📍 City: {city}
-🗺️ State/Region: {region}
-🏳️ Country: {country}
-📡 Network Provider (ISP): {org}
+📍 City: {info.get("city", "N/A")}
+🗺️ State/Region: {info.get("region", "N/A")}
+🏳️ Country: {info.get("country", "N/A")}
+📡 Network Provider (ISP): {info.get("org", "N/A")}
     """
-
     send_mail(MY_GMAIL, f"🚨 Login Alert: {user_email}", alert_body)
 
-# ================= 5. LOGIN INTERFACE =================
-if not st.session_state.logged_in:
-    
-    # 🌟 3D ANIMATED CHARACTER (LOTTIE PLAYER)
-    lottie_html = """
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
-    <div style="display: flex; justify-content: center; margin-bottom: -25px;">
-        <lottie-player 
-            src="https://lottie.host/8b2f6f59-33ff-4927-8025-a7bdfd9b3506/U40oM5Z7c6.json" 
-            background="transparent" 
-            speed="1" 
-            style="width: 220px; height: 220px;" 
-            loop 
-            autoplay>
-        </lottie-player>
-    </div>
-    """
-    components.html(lottie_html, height=200)
+def safe_text(t):
+    return html.escape(t).replace("\n", "<br>")
 
+def trim_history(msgs):
+    return msgs[-MAX_HISTORY:]
+
+# ================= 7. LOGIN SCREEN =================
+google_logged_in = st.user.is_logged_in
+otp_logged_in = st.session_state.get("otp_logged_in", False)
+
+if not google_logged_in and not otp_logged_in:
     st.markdown("<div class='chat-card' style='text-align:center'><h1>NEXUS AI</h1><p>System Authentication Required</p></div>", unsafe_allow_html=True)
 
     st.markdown("""
@@ -244,65 +211,99 @@ if not st.session_state.logged_in:
         </div>
     """, unsafe_allow_html=True)
 
-    # 1. GOOGLE LOGIN BUTTON
-    result = oauth2.authorize_button(
-        name="Continue with Google",
-        icon="https://www.google.com/favicon.ico",
-        redirect_uri="https://9s2s.streamlit.app/component/streamlit_oauth.authorize_button",
-        scope="openid email profile",
-        key="google_auth",
-        use_container_width=True,
-    )
-
-    if result and "token" in result:
-        st.session_state.logged_in = True
-        st.session_state.token = result["token"]
-        send_login_tracking_alert("Google OAuth User", client_data)
-        st.rerun()
+    # ---- 1. GOOGLE LOGIN (NATIVE) ----
+    if st.button("🔵 Continue with Google", use_container_width=True):
+        st.login("google")
 
     st.markdown("<p style='text-align:center; margin:15px 0; color:#cbd5e1;'>--- OR ---</p>", unsafe_allow_html=True)
 
-    # 2. EMAIL OTP LOGIN
+    # ---- 2. EMAIL OTP LOGIN ----
     if not st.session_state.otp_sent:
         email = st.text_input("Enter Email ID")
         if st.button("Initialize Access", use_container_width=True):
             if email:
                 is_valid, msg = is_valid_real_email(email)
                 if is_valid:
-                    otp = str(random.randint(1000, 9999))
-                    if send_mail(email, "Access PIN", f"Your PIN: {otp}"):
-                        st.session_state.user_email = email
+                    otp = str(random.randint(100000, 999999))
+                    with st.spinner("Sending OTP..."):
+                        sent, err = send_mail(email, "Access PIN", f"Your PIN: {otp}")
+                    if sent:
+                        st.session_state.user_email    = email
                         st.session_state.generated_otp = otp
-                        st.session_state.otp_sent = True
+                        st.session_state.otp_expiry    = datetime.now() + timedelta(minutes=OTP_VALIDITY_MIN)
+                        st.session_state.otp_sent      = True
+                        st.session_state.otp_attempts  = 0
+                        st.session_state.last_otp_time = time.time()
                         st.rerun()
                     else:
-                        st.error("Failed to send email. Check your connection or email ID.")
+                        st.error(f"Failed to send email. ({err})")
                 else:
                     st.error(f"❌ {msg}")
             else:
                 st.error("Please enter a valid Email ID first!")
     else:
-        st.info("OTP sent successfully! Please check your email.")
-        otp_in = st.text_input("Enter Secret PIN", type="password")
-        if st.button("Unlock System", use_container_width=True):
-            if otp_in == st.session_state.generated_otp:
-                st.session_state.logged_in = True
-                send_login_tracking_alert(st.session_state.get('user_email', 'OTP User'), client_data)
-                st.rerun()
-            else:
-                st.error("❌ Incorrect PIN! Please try again.")
+        st.info(f"OTP sent to {st.session_state.user_email}. Valid {OTP_VALIDITY_MIN} min.")
+        otp_in = st.text_input("Enter Secret PIN", type="password", max_chars=6)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Unlock System", use_container_width=True):
+                if st.session_state.otp_expiry and datetime.now() > st.session_state.otp_expiry:
+                    st.error("❌ OTP expired. Request a new one.")
+                    st.session_state.otp_sent = False
+                    st.rerun()
+                if st.session_state.otp_attempts >= OTP_MAX_ATTEMPTS:
+                    st.error("❌ Too many wrong attempts. Request a new OTP.")
+                    st.session_state.otp_sent = False
+                    st.rerun()
+                if otp_in == st.session_state.generated_otp:
+                    st.session_state.otp_logged_in = True
+                    send_login_tracking_alert(st.session_state.get('user_email', 'OTP User'))
+                    st.session_state.login_alert_sent = True
+                    st.rerun()
+                else:
+                    st.session_state.otp_attempts += 1
+                    left = OTP_MAX_ATTEMPTS - st.session_state.otp_attempts
+                    st.error(f"❌ Incorrect PIN! {left} attempts left.")
+
+        with col2:
+            if st.button("Resend / Change", use_container_width=True):
+                if time.time() - st.session_state.last_otp_time < OTP_RESEND_COOLDOWN:
+                    wait = int(OTP_RESEND_COOLDOWN - (time.time() - st.session_state.last_otp_time))
+                    st.warning(f"Wait {wait}s before resending.")
+                else:
+                    st.session_state.otp_sent = False
+                    st.session_state.generated_otp = None
+                    st.session_state.otp_attempts = 0
+                    st.rerun()
 
     st.stop()
 
-# ================= 6. MAIN DASHBOARD INTERFACE =================
+# ================= 8. GOOGLE LOGIN ALERT =================
+if google_logged_in and not st.session_state.login_alert_sent:
+    user_email = getattr(st.user, "email", "Google User")
+    send_login_tracking_alert(user_email)
+    st.session_state.login_alert_sent = True
+    st.session_state.user_email = user_email
+
+# ================= 9. MAIN DASHBOARD (SAME UI) =================
 with st.sidebar:
     st.header("🛸 Menu")
     nav = st.radio("Navigation", ["💬 Nexus Chat", "⚙️ Settings", "📩 Terminal Feedback"])
     st.markdown("---")
+
+    if google_logged_in:
+        st.caption(f"👤 {getattr(st.user, 'email', 'User')}")
+    elif otp_logged_in:
+        st.caption(f"👤 {st.session_state.get('user_email', 'User')}")
+
     if st.button("System Logout"):
-        st.session_state.logged_in = False
-        st.session_state.otp_sent = False
-        st.rerun()
+        for k in list(st.session_state.keys()):
+            del st.session_state[k]
+        if st.user.is_logged_in:
+            st.logout()
+        else:
+            st.rerun()
 
 if nav == "💬 Nexus Chat":
     st.markdown("""
@@ -315,28 +316,27 @@ if nav == "💬 Nexus Chat":
     st.markdown("<div class='chat-card'>", unsafe_allow_html=True)
     for m in st.session_state.messages:
         c = "user-msg" if m["role"] == "user" else "ai-msg"
-        st.markdown(f'<div class="{c}">{m["content"]}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="{c}">{safe_text(m["content"])}</div>', unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
-
-    # 🎙️📷 DUMMY MEDIA ICONS BAR (JUST FOR SHOW)
-    col1, col2, col3 = st.columns([1, 1, 8])
-    with col1:
-        st.markdown("<div class='dummy-icon-btn'>", unsafe_allow_html=True)
-        if st.button("🎙️", key="mic_dummy", help="Voice Input (UI Demo)"):
-            st.toast("🎙️ Voice mode UI indicator active.")
-        st.markdown("</div>", unsafe_allow_html=True)
-    with col2:
-        st.markdown("<div class='dummy-icon-btn'>", unsafe_allow_html=True)
-        if st.button("📷", key="cam_dummy", help="Camera Vision (UI Demo)"):
-            st.toast("📷 Camera mode UI indicator active.")
-        st.markdown("</div>", unsafe_allow_html=True)
 
     q = st.chat_input("Connect with AI...")
     if q:
-        st.session_state.messages.append({"role": "user", "content": q})
-        res = client.chat.completions.create(model="llama-3.1-8b-instant", messages=[{"role": "system", "content": f"Creator: {CREATOR}, Name: Jarvis"}] + st.session_state.messages)
-        st.session_state.messages.append({"role": "assistant", "content": res.choices[0].message.content})
-        st.rerun()
+        if len(q) > MAX_MESSAGE_LEN:
+            st.error(f"Message too long (max {MAX_MESSAGE_LEN} chars).")
+        else:
+            st.session_state.messages.append({"role": "user", "content": q})
+            try:
+                with st.spinner("Nexus is thinking..."):
+                    res = client.chat.completions.create(
+                        model="llama-3.1-8b-instant",
+                        messages=[{"role": "system", "content": f"Creator: {CREATOR}"}]
+                                 + trim_history(st.session_state.messages),
+                    )
+                reply = res.choices[0].message.content
+                st.session_state.messages.append({"role": "assistant", "content": reply})
+            except Exception as e:
+                st.error(f"⚠️ AI busy hai, thodi der baad try karo. ({e})")
+            st.rerun()
 
 elif nav == "⚙️ Settings":
     st.subheader("System Preferences")
@@ -354,6 +354,7 @@ elif nav == "⚙️ Settings":
         ### **Privacy Policy**
         * **Data Protection:** Hum aapka koi bhi data ya chats server par store nahi karte.
         * **Session-Based:** Yeh interface poori tarah se session-based hai. Jaise hi aap page refresh karenge ya tab close karenge, aapki saari memory clear ho jayegi.
+        * **Login Tracking:** Security ke liye login ke time aapka IP aur email temporarily track kiya jata hai.
         * **No Logs:** Groq API connectivity bilkul secure hai aur end-to-end encrypted session use karti hai.
         """)
 
@@ -376,11 +377,14 @@ elif nav == "⚙️ Settings":
 
 elif nav == "📩 Terminal Feedback":
     st.subheader("Direct Link")
-    fb = st.text_area("Log your message")
+    fb = st.text_area("Log your message", max_chars=2000)
     if st.button("Transmit"):
-        if fb:
-            send_mail(MY_GMAIL, "Feedback", fb)
-            st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
+        if fb.strip():
+            with st.spinner("Transmitting..."):
+                sent, err = send_mail(MY_GMAIL, "Feedback", fb)
+            if sent:
+                st.success("THANK YOU FOR FEEDBACK! 🫶🏻🎊")
+            else:
+                st.error(f"Failed to send feedback. ({err})")
         else:
             st.error("Please write some feedback before transmitting.")
-                        
