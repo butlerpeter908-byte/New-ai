@@ -5,3 +5,4 @@ streamlit-oauth
 requests
 pytz
 edge-tts
+streamlit>=1.42
