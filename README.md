@@ -25,4 +25,4 @@ Pro AI is a high-performance, professional-grade AI assistant built with a focus
 
 1. **Clone the repository:**
    ```bash
-   git clone [https://github.com/YOUR_USERNAME/Pro-AI.git](https://github.com/YOUR_USERNAME/Pro-AI.git)
+   git clone [https://github.com/butlerpeter908-byte/Pro-AI.git]([https://github.com/YOUR_USERNAME/Pro-AI.git](https://github.com/butlerpeter908-byte/Pro-AI.git))
